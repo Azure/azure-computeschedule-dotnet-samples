@@ -1,0 +1,178 @@
+﻿
+# Most of the below is the result of Visual Studio, gradle and VSTest.
+/**/[Tt]arget/**
+/**/[Bb]in/**
+/**/[Oo]bj/**
+/**/[Oo]utput/**
+/**/[Tt]est[Rr]esults/**
+/**/[Pp]kg/**
+/**/[Pp]ackages/**
+/**/[Bb]uild/**
+/**/.[Gg]radle/**
+/**/[Rr]elease/**
+/**/[Dd]ebug/**
+/**/[Tt]arget/**
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+target/
+.tools/
+
+# All kinds of output and temporary files that should not be checked in.
+/**/*.exe
+/**/*.dll
+/**/*.o
+/**/*.hi
+/**/*.class
+/**/*.jar
+/**/*.war
+/**/*.beam
+/**/*.trx
+/**/*.log
+/**/.vs/
+/**/*.bak
+/**/*.suo
+/**/*.user
+/**/*.db
+/**/*.metaproj
+/**/*.metaproj.tmp
+/**/*.lock.json
+/**/*.nupkg
+/**/HelloWorld
+/**/coverage.cobertura.xml
+/**/launchSettings.json
+/**/_site
+
+# Visual Studio junk.
+**/.vs/**/*
+/**/*/__pycache__/**/*
+
+# Pipeline generated junk.
+pipeline.log
+endortemp/
+artifacts/
+# BuildLogs
+BuildLogs/**
+/**/*.cobertura.xml
+
+.fake
+.ionide
+
+# VS Code stuff
+.vscode/*
+
+# Node.js Tools for Visual Studio
+.ntvs_analysis.dat
+node_modules/
+
+## Ignore Guardian internal files
+.r/
+rc/
+rs/
+i/
+p/
+c/
+o/
+
+## Ignore Guardian Local settings
+LocalSettings.gdn.json
+
+/.vs/ProjectEvaluation/scheduledactions-sample-project.metadata.v9.bin
+/.vs/ProjectEvaluation/scheduledactions-sample-project.projects.v9.bin
+/.vs/ProjectEvaluation/scheduledactions-sample-project.strings.v9.bin
+/.vs/scheduledactions-sample-project/CopilotIndices/0.2.1627.58842/CodeChunks.db
+/.vs/scheduledactions-sample-project/CopilotIndices/0.2.1627.58842/CodeChunks.db-wal
+*.db
+*.db-shm
+*.db-wal
+/.vs/scheduledactions-sample-project/FileContentIndex/671d06c6-2b33-4557-bf33-9ef8b928aeb5.vsidx
+*.vsidx
+/.vs/scheduledactions-sample-project/v17/DocumentLayout.backup.json
+
+# Most of the below is the result of Visual Studio, gradle and VSTest.
+/**/[Tt]arget/**
+/**/[Bb]in/**
+/**/[Oo]bj/**
+/**/[Oo]utput/**
+/**/[Tt]est[Rr]esults/**
+/**/[Pp]kg/**
+/**/[Pp]ackages/**
+/**/[Bb]uild/**
+/**/.[Gg]radle/**
+/**/[Rr]elease/**
+/**/[Dd]ebug/**
+/**/[Tt]arget/**
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+target/
+.tools/
+
+# All kinds of output and temporary files that should not be checked in.
+/**/*.exe
+/**/*.dll
+/**/*.o
+/**/*.hi
+/**/*.class
+/**/*.jar
+/**/*.war
+/**/*.beam
+/**/*.trx
+/**/*.log
+/**/.vs/
+/**/*.bak
+/**/*.suo
+/**/*.user
+/**/*.db
+/**/*.metaproj
+/**/*.metaproj.tmp
+/**/*.lock.json
+/**/*.nupkg
+/**/HelloWorld
+/**/coverage.cobertura.xml
+/**/launchSettings.json
+
+# Visual Studio junk.
+**/.vs/**/*
+/**/*/__pycache__/**/*
+
+# Pipeline generated junk.
+pipeline.log
+endortemp/
+artifacts/
+# BuildLogs
+BuildLogs/**
+/**/*.cobertura.xml
+
+.fake
+.ionide
+
+# VS Code stuff
+.vscode/*
+
+# Node.js Tools for Visual Studio
+.ntvs_analysis.dat
+node_modules/
+
+
+# Environment variable files with secrets  never commit these
+.env
+!.env.example
