@@ -32,18 +32,18 @@ internal static class FlexRequestBuilder
     /// profiles and allocation strategy. ComputeSchedule will attempt each size
     /// in priority order when the preferred SKU is unavailable.
     /// </summary>
-    public static FlexProperties BuildFlexProperties() =>
+    public static ComputeScheduleFlexProperties BuildFlexProperties() =>
         new(
             new[]
             {
-                new VmSizeProfile(name: "Standard_D2ads_v5", rank: 0),
-                new VmSizeProfile(name: "Standard_E4as_v5", rank: 1),
+                new ComputeScheduleVmSizeProfile(name: "Standard_D2ads_v5", rank: 0),
+                new ComputeScheduleVmSizeProfile(name: "Standard_E4as_v5", rank: 1),
             },
-            OsType.Windows,
-            new PriorityProfile
+            ComputeScheduleOSType.Windows,
+            new ComputeSchedulePriorityProfile
             {
-                Type = PriorityType.Regular,
-                AllocationStrategy = AllocationStrategy.Prioritized,
+                Type = ComputeSchedulePriorityType.Regular,
+                AllocationStrategy = ComputeScheduleAllocationStrategy.Prioritized,
             });
 
     /// <summary>

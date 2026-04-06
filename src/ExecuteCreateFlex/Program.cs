@@ -4,10 +4,17 @@ public static class Program
 {
     public static async Task Main(string[] args)
     {
+        Console.WriteLine("Starting ExecuteCreateFlex sample.");
+
         var resourceCountOverride = TryParseResourceCount(args);
         var runBatchDemo = args.Contains("--batch-demo", StringComparer.OrdinalIgnoreCase)
             || args.Contains("--batch-request-demo", StringComparer.OrdinalIgnoreCase);
         var runApiDemo = args.Contains("--api-demo", StringComparer.OrdinalIgnoreCase);
+
+        if (resourceCountOverride.HasValue)
+        {
+            Console.WriteLine($"Requested resource count override: {resourceCountOverride.Value}.");
+        }
 
         if (runBatchDemo && runApiDemo)
         {
@@ -17,6 +24,7 @@ public static class Program
 
         if (runBatchDemo)
         {
+            Console.WriteLine("Running batch demo.");
             await ExecuteCreateFlexBatchDemo.RunAsync(resourceCountOverride);
             return;
         }
@@ -30,6 +38,7 @@ public static class Program
             return;
         }
 
+        Console.WriteLine("Running API demo.");
         await ExecuteCreateFlexApiDemo.RunAsync(resourceCountOverride);
     }
 

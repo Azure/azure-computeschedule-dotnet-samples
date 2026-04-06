@@ -457,7 +457,7 @@ namespace UtilityMethods
             try
             {
                 // Execute the create flex operation
-                CreateFlexResourceOperationResult? result = await subscriptionResource.VirtualMachinesExecuteCreateFlexAsync(location, executeCreateFlexContent);
+                CreateFlexResourceOperationResult? result = await subscriptionResource.ExecuteVirtualMachineCreateFlexOperationAsync(location, executeCreateFlexContent);
 
                 /// <summary>
                 /// Each operationId corresponds to a virtual machine operation in ScheduledActions.
