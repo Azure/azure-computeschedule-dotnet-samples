@@ -54,7 +54,11 @@ public static class StartWithCleanBootFallback
         {
             Console.WriteLine($"[Result] Operation {opId}: State = {details.State}");
 
-            if (details.State == ScheduledActionOperationState.Failed)
+            if (details.State == ScheduledActionOperationState.Succeeded)
+            {
+                Console.WriteLine("[OK] Start (resume) succeeded — no fallback needed.");
+            }
+            else if (details.State == ScheduledActionOperationState.Failed)
             {
                 if (details.ResourceOperationError is not null)
                 {
@@ -83,10 +87,6 @@ public static class StartWithCleanBootFallback
                 {
                     Console.WriteLine("[Fallback] Not executed (may indicate a non-retriable error).");
                 }
-            }
-            else if (details.State == ScheduledActionOperationState.Succeeded)
-            {
-                Console.WriteLine("[OK] Start (resume) succeeded — no fallback needed.");
             }
         }
     }

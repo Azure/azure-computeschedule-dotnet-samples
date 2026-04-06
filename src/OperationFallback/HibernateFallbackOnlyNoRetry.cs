@@ -50,7 +50,11 @@ public static class HibernateFallbackOnlyNoRetry
         {
             Console.WriteLine($"[Result] Operation {opId}: State = {details.State}");
 
-            if (details.State == ScheduledActionOperationState.Failed)
+            if (details.State == ScheduledActionOperationState.Succeeded)
+            {
+                Console.WriteLine("[OK] Hibernate succeeded — no fallback needed.");
+            }
+            else if (details.State == ScheduledActionOperationState.Failed)
             {
                 if (details.ResourceOperationError is not null)
                 {
@@ -79,10 +83,6 @@ public static class HibernateFallbackOnlyNoRetry
                 {
                     Console.WriteLine("[Fallback] Not executed (may indicate a non-retriable error).");
                 }
-            }
-            else if (details.State == ScheduledActionOperationState.Succeeded)
-            {
-                Console.WriteLine("[OK] Hibernate succeeded — no fallback needed.");
             }
         }
     }
