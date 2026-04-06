@@ -32,30 +32,9 @@ internal static class ArmClientFactory
     /// </summary>
     /// <param name="credential">The Azure credential used to authenticate.</param>
     /// <param name="subscriptionId">The Azure subscription ID.</param>
-    /// <param name="location">
-    /// Optional. When provided, the client targets the location-specific ARM endpoint
-    /// (<c>https://{location}.management.azure.com</c>) as a temporary workaround for
-    /// regions not yet running the latest SDK. Defaults to <c>null</c>, which uses the
-    /// standard global endpoint.
     /// </param>
-    public static ArmClient CreateScheduleClient(TokenCredential credential, string subscriptionId, string? location = null)
+    public static ArmClient CreateScheduleClient(TokenCredential credential, string subscriptionId)
     {
-        // Optionally inject a custom completion-notification header:
-        // options.AddPolicy(new SetHeaderPolicy(), HttpPipelinePosition.PerCall);
-
-        if (location is not null)
-        {
-            // TODO: Remove this branch once the SDK is fully rolled out to all regions.
-            //       The permanent form is: return new ArmClient(credential, subscriptionId);
-            var options = new ArmClientOptions
-            {
-                Environment = new ArmEnvironment(
-                    new Uri($"https://{location}.management.azure.com"),
-                    "https://management.core.windows.net/")
-            };
-            return new ArmClient(credential, subscriptionId, options);
-        }
-
         return new ArmClient(credential, subscriptionId);
     }
 }
