@@ -129,21 +129,6 @@ internal static class ExecuteCreateFlexApiDemo
             }
         });
 
-        // // Per-resource override
-        payload.ResourceOverrides.Add(new Dictionary<string, BinaryData>
-        {
-            ["location"] = BinaryData.FromString($"\"{location}\""),
-            ["properties"] = BinaryData.FromObjectAsJson(new
-            {
-                osProfile = new
-                {
-                    computerName = "demovm01",
-                    adminUsername = config.VmAdminUsername,
-                    adminPassword = config.VmAdminPassword
-                }
-            })
-        });
-
         // 3) Build request wrapper
         LogStep(6, "Building the ExecuteCreateFlex request.");
         var request = new ExecuteCreateFlexContent(payload, new ScheduledActionExecutionParameterDetail())
