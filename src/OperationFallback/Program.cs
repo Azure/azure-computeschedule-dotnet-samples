@@ -12,7 +12,6 @@ namespace OperationFallback;
 /// Demonstrates the operation fallback (OnFailureAction) feature.
 ///
 /// Configure your environment in appsettings.json before running.
-/// Uncomment the scenario you want to run below.
 /// </summary>
 public static class Program
 {
@@ -32,7 +31,8 @@ public static class Program
         string scenario = settings["Scenario"] ?? "HibernateFallback";
 
         TokenCredential cred = new DefaultAzureCredential();
-        ArmClient client = new(cred);
+        ArmClient client = new(cred, subscriptionId);
+
         var subscriptionResourceId = SubscriptionResource.CreateResourceIdentifier(subscriptionId);
         var subscriptionResource = client.GetSubscriptionResource(subscriptionResourceId);
 
