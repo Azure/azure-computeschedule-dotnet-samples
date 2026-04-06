@@ -124,7 +124,7 @@ internal static class FlexBatchExecutor
         await Task.WhenAll(batchTasks);
         CompleteAggregateProgressLine(aggregateProgressLength);
 
-        WriteFinalStatus(
+        FinalStatusConsoleWriter.WriteBatchStatus(
             $"Combined final status: requested={totalRequestedVmCount}, valid={totalValid}, completed={totalCompleted}, succeeded={totalSucceeded}, failed={totalFailed}, cancelled={totalCancelled}, batchRequestFailures={batchRequestFailures}.",
             totalRequestedVmCount,
             totalCompleted,
@@ -181,34 +181,5 @@ internal static class FlexBatchExecutor
         }
 
         return batchSizes;
-    }
-
-    private static void WriteFinalStatus(string message, int requestedCount, int completedCount, int failedCount, int cancelledCount, int batchRequestFailures)
-    {
-        if (Console.IsOutputRedirected)
-        {
-            Console.WriteLine(message);
-            return;
-        }
-
-        var originalColor = Console.ForegroundColor;
-        Console.ForegroundColor = GetFinalStatusColor(requestedCount, completedCount, failedCount, cancelledCount, batchRequestFailures);
-        Console.WriteLine(message);
-        Console.ForegroundColor = originalColor;
-    }
-
-    private static ConsoleColor GetFinalStatusColor(int requestedCount, int completedCount, int failedCount, int cancelledCount, int batchRequestFailures)
-    {
-        if (failedCount > 0 || batchRequestFailures > 0)
-        {
-            return ConsoleColor.Red;
-        }
-
-        if (cancelledCount > 0 || completedCount < requestedCount)
-        {
-            return ConsoleColor.Yellow;
-        }
-
-        return ConsoleColor.Green;
     }
 }

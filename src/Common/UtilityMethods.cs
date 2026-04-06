@@ -293,15 +293,15 @@ namespace UtilityMethods
                 var operationState = operation.State;
                 var operationError = operation.ResourceOperationError;
 
-                Console.WriteLine($"Trying polling for operation with id {operationId}.");
+                Console.WriteLine($"[Polling operation]: {operationId}");
                 if (IsOperationTerminal(operationState))
                 {
                     completedOps.TryAdd(operationId, operation);
-                    Console.WriteLine($"Operation {operationId} completed with state {operationState}");
+                    Console.WriteLine($"[Polling operation]: {operationId} completed with state {operationState}");
 
                     if (operationError != null)
                     {
-                        Console.WriteLine($"Operation {operationId} encountered the following error: errorCode {operationError.ErrorCode}, errorDetails: {operationError.ErrorDetails}");
+                        Console.WriteLine($"[Polling operation]: {operationId} encountered the following error: errorCode {operationError.ErrorCode}, errorDetails: {operationError.ErrorDetails}");
                     }
                 }
             }
