@@ -1,8 +1,6 @@
 using Azure.Core;
 using Azure.Identity;
 using Azure.ResourceManager;
-using Azure.ResourceManager.ComputeSchedule;
-using Azure.ResourceManager.ComputeSchedule.Models;
 using Azure.ResourceManager.Resources;
 using Microsoft.Extensions.Configuration;
 
@@ -59,49 +57,5 @@ public static class Program
                 Console.WriteLine("Valid scenarios: HibernateFallback, StartFallback, HibernateFallbackNoRetry, CreateFallback");
                 break;
         }
-    }
-
-    /// <summary>
-    /// Polls operation status until all operations reach a terminal state (Succeeded, Failed, or Cancelled).
-    /// </summary>
-    internal static async Task<Dictionary<string, ResourceOperationDetails>> PollUntilComplete(
-        HashSet<string> operationIds,
-        string location,
-        SubscriptionResource subscriptionResource)
-    {
-        var completed = new Dictionary<string, ResourceOperationDetails>();
-        var pending = new HashSet<string>(operationIds);
-
-        while (pending.Count > 0)
-        {
-            await Task.Delay(TimeSpan.FromSeconds(30));
-
-            var statusRequest = new GetOperationStatusContent(pending, Guid.NewGuid().ToString());
-            var response = await subscriptionResource.GetVirtualMachineOperationStatusAsync(location, statusRequest);
-
-            foreach (var result in response.Value.Results)
-            {
-                var details = result.Operation;
-                if (details is null)
-                {
-                    continue;
-                }
-
-                var state = details.State;
-                if (state == ScheduledActionOperationState.Succeeded ||
-                    state == ScheduledActionOperationState.Failed ||
-                    state == ScheduledActionOperationState.Cancelled)
-                {
-                    completed[details.OperationId] = details;
-                    pending.Remove(details.OperationId);
-                }
-                else
-                {
-                    Console.WriteLine($"[Polling] {details.OperationId}: {state}");
-                }
-            }
-        }
-
-        return completed;
     }
 }

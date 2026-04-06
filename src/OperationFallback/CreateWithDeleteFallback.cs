@@ -1,3 +1,4 @@
+using UtilityMethods;
 using Azure;
 using Azure.Core;
 using Azure.ResourceManager;
@@ -177,7 +178,8 @@ public static class CreateWithDeleteFallback
             .ToHashSet();
 
         Console.WriteLine($"[Submit] {operationIds.Count} operation(s) submitted. Polling for results...\n");
-        var completedOperations = await Program.PollUntilComplete(operationIds, location, subscriptionResource);
+        var completedOperations = new Dictionary<string, ResourceOperationDetails>();
+        await UtilityMethods.HelperMethods.PollOperationStatus(operationIds, completedOperations, location, subscriptionResource);
 
         foreach (var (opId, details) in completedOperations)
         {

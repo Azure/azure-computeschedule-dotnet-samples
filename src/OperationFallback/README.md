@@ -1,6 +1,6 @@
-# Retry and Fallback Policy for BulkAction
+# Retry and Fallback Policy for ScheduledAction
 
-This guide explains how to configure retry and fallback behavior for VM operations submitted through the BulkAction API. These features help maximize the success rate of your operations by automatically retrying on transient failures and optionally performing a fallback action when all retries are exhausted.
+This guide explains how to configure retry and fallback behavior for VM operations submitted through the ScheduledAction API. These features help maximize the success rate of your operations by automatically retrying on transient failures and optionally performing a fallback action when all retries are exhausted.
 
 ## Overview
 
