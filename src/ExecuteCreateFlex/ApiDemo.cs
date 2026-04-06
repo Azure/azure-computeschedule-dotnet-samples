@@ -13,7 +13,6 @@ internal static class ExecuteCreateFlexApiDemo
 {
     public static async Task RunAsync(int? resourceCountOverride = null)
     {
-        LogStep(1, "Loading configuration.");
         var config = FlexCreateConfig.Load();
         var resourceCount = resourceCountOverride ?? FlexRequestBuilder.TotalRequestedVmCount;
 
@@ -22,19 +21,16 @@ internal static class ExecuteCreateFlexApiDemo
         var location = config.Location;
         var resourceGroupName = config.ResourceGroupName;
 
-        LogStep(2, "Creating ARM clients and resolving the resource group.");
         TokenCredential credential = new DefaultAzureCredential();
         var armClient = new ArmClient(credential, subscriptionId);
         var subscription = armClient.GetSubscriptionResource(SubscriptionResource.CreateResourceIdentifier(subscriptionId));
         var resourceGroup = await subscription.GetResourceGroupAsync(config.ResourceGroupName);
 
-        LogStep(3, "Creating or updating the virtual network and resolving the subnet.");
         var vnetClient = ArmClientFactory.CreateVNetClient(credential, config.SubscriptionId);
         var vnet = await HelperMethods.CreateVirtualNetwork(resourceGroup, config.SubnetName, config.VnetName, config.Location, vnetClient);
         var subnetId = HelperMethods.GetSubnetId(vnet).ToString();
  
-        // 1) Build Flex properties (VM size priority order)
-        LogStep(4, "Building flex properties.");
+        // Build Flex properties (VM size priority order)
         var flexProperties = new ComputeScheduleFlexProperties(
             new[]
             {
@@ -49,8 +45,7 @@ internal static class ExecuteCreateFlexApiDemo
                 AllocationStrategy = ComputeScheduleAllocationStrategy.Prioritized,
             });
 
-        // 2) Build payload (focus on this more)
-        LogStep(5, "Building the flex payload.");
+        // Build flex payload
         var payload = new ResourceProvisionFlexPayload(resourceCount: resourceCount, flexProperties)
         {
             ResourcePrefix = "demo-flex-"
@@ -129,22 +124,19 @@ internal static class ExecuteCreateFlexApiDemo
             }
         });
 
-        // 3) Build request wrapper
-        LogStep(6, "Building the ExecuteCreateFlex request.");
+        // Build request wrapper
         var request = new ExecuteCreateFlexContent(payload, new ScheduledActionExecutionParameterDetail())
         {
             CorrelationId = Guid.NewGuid().ToString()
         };
         Console.WriteLine($"CorrelationId: {request.CorrelationId}");
 
-        // 4) Execute API
-        LogStep(7, "Submitting ExecuteCreateFlex to Azure.");
+        // Execute API
         CreateFlexResourceOperationResult result =
             (await subscription.ExecuteVirtualMachineCreateFlexOperationAsync(location, request)).Value;
         Console.WriteLine($"ExecuteCreateFlex returned {result.Results.Count} operation result(s).");
 
-        // 5) Poll operation status via shared helper
-        LogStep(8, "Preparing operations for polling.");
+        // Poll operation status via shared helper
         var validOps = HelperMethods.ExcludeResourcesNotProcessed(result.Results);
         var completedOperations = new Dictionary<string, ResourceOperationDetails>();
         Console.WriteLine($"Valid operations to poll: {validOps.Count}.");
@@ -155,54 +147,18 @@ internal static class ExecuteCreateFlexApiDemo
             return;
         }
 
-        LogStep(9, "Polling operation status until terminal states are reached.");
         await HelperMethods.PollOperationStatus([.. validOps.Keys], completedOperations, location, subscription);
 
-        LogStep(10, "Summarizing final operation results.");
         var completedCount = completedOperations.Count;
         var succeededCount = completedOperations.Values.Count(op => op.State == ScheduledActionOperationState.Succeeded);
         var failedCount = completedOperations.Values.Count(op => op.State == ScheduledActionOperationState.Failed);
         var cancelledCount = completedOperations.Values.Count(op => op.State == ScheduledActionOperationState.Cancelled);
 
-        WriteFinalStatus(
+        FinalStatusConsoleWriter.WriteApiStatus(
             $"Final status: valid={validOps.Count}, completed={completedCount}, succeeded={succeededCount}, failed={failedCount}, cancelled={cancelledCount}.",
             validOps.Count,
             completedCount,
             failedCount,
             cancelledCount);
-    }
-
-    private static void LogStep(int stepNumber, string message)
-    {
-        Console.WriteLine($"Step {stepNumber}: {message}");
-    }
-
-    private static void WriteFinalStatus(string message, int validCount, int completedCount, int failedCount, int cancelledCount)
-    {
-        if (Console.IsOutputRedirected)
-        {
-            Console.WriteLine(message);
-            return;
-        }
-
-        var originalColor = Console.ForegroundColor;
-        Console.ForegroundColor = GetFinalStatusColor(validCount, completedCount, failedCount, cancelledCount);
-        Console.WriteLine(message);
-        Console.ForegroundColor = originalColor;
-    }
-
-    private static ConsoleColor GetFinalStatusColor(int validCount, int completedCount, int failedCount, int cancelledCount)
-    {
-        if (failedCount > 0)
-        {
-            return ConsoleColor.Red;
-        }
-
-        if (cancelledCount > 0 || completedCount < validCount)
-        {
-            return ConsoleColor.Yellow;
-        }
-
-        return ConsoleColor.Green;
     }
 }
