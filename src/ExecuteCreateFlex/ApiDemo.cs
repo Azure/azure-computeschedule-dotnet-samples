@@ -30,22 +30,12 @@ internal static class ExecuteCreateFlexApiDemo
         var vnet = await HelperMethods.CreateVirtualNetwork(resourceGroup, config.SubnetName, config.VnetName, config.Location, vnetClient);
         var subnetId = HelperMethods.GetSubnetId(vnet).ToString();
  
-        // 1) Build execution params
-        var executionParams = new ScheduledActionExecutionParameterDetail
-        {
-            RetryPolicy = new UserRequestRetryPolicy
-            {
-                RetryCount = 1,
-                RetryWindowInMinutes = 45
-            }
-        };
-
-        // 2) Build Flex properties (VM size priority order)
+        // 1) Build Flex properties (VM size priority order)
         var flexProperties = new FlexProperties(
             new[]
             {
-                new VmSizeProfile("Standard_D2ads_v5", 0),
-                new VmSizeProfile("Standard_E4as_v5", 1),
+                new VmSizeProfile(name: "Standard_D2ads_v5", rank: 0),
+                new VmSizeProfile(name: "Standard_E4as_v5", rank: 1),
                 // we can add more
             },
             OsType.Windows,
@@ -55,7 +45,7 @@ internal static class ExecuteCreateFlexApiDemo
                 AllocationStrategy = AllocationStrategy.Prioritized,
             });
 
-        // 3) Build payload (focus on this more)
+        // 2) Build payload (focus on this more)
         var payload = new ResourceProvisionFlexPayload(resourceCount: resourceCount, flexProperties)
         {
             ResourcePrefix = "demo-flex-"
@@ -150,53 +140,34 @@ internal static class ExecuteCreateFlexApiDemo
             })
         });
 
-        // 4) Build request wrapper
-        var request = new ExecuteCreateFlexContent(payload, executionParams)
+        // 3) Build request wrapper
+        var request = new ExecuteCreateFlexContent(payload, new ScheduledActionExecutionParameterDetail())
         {
             CorrelationId = Guid.NewGuid().ToString()
         };
 
-        // 5) Execute API
+        // 4) Execute API
         CreateFlexResourceOperationResult result =
             (await subscription.VirtualMachinesExecuteCreateFlexAsync(location, request)).Value;
 
-        // 6) Poll operation status // just use a wrapper
-        var operationIds = result.Results
-            .Where(r => r.ErrorCode == null && r.Operation.State != ScheduledActionOperationState.Blocked)
-            .Select(r => r.Operation.OperationId)
-            .ToHashSet();
+        // 5) Poll operation status via shared helper
+        var validOps = HelperMethods.ExcludeResourcesNotProcessed(result.Results);
+        var completedOperations = new Dictionary<string, ResourceOperationDetails>();
 
-        var totalOperationCount = operationIds.Count;
-        var terminalOperations = new Dictionary<string, ScheduledActionOperationState>();
-
-        while (operationIds.Count > 0)
+        if (validOps.Count == 0)
         {
-            var status = (await subscription.GetVirtualMachineOperationStatusAsync(
-                location,
-                new GetOperationStatusContent(operationIds, Guid.NewGuid().ToString()))).Value;
-
-            foreach (var operation in status.Results)
-            {
-                if (operation.Operation.State == ScheduledActionOperationState.Succeeded
-                    || operation.Operation.State == ScheduledActionOperationState.Failed
-                    || operation.Operation.State == ScheduledActionOperationState.Cancelled)
-                {
-                    terminalOperations.TryAdd(operation.Operation.OperationId, operation.Operation.State.Value);
-                    operationIds.Remove(operation.Operation.OperationId);
-                }
-            }
-
-            // summarize (cumulative)
-            var succeeded = terminalOperations.Values.Count(state => state == ScheduledActionOperationState.Succeeded);
-            var failed = terminalOperations.Values.Count(state => state == ScheduledActionOperationState.Failed);
-            var cancelled = terminalOperations.Values.Count(state => state == ScheduledActionOperationState.Cancelled);
-
-            Console.WriteLine($"Completed={terminalOperations.Count}/{totalOperationCount}, Succeeded={succeeded}, Failed={failed}, Cancelled={cancelled}");
-
-            if (operationIds.Count > 0)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(15));
-            }
+            Console.WriteLine("No valid operations to poll");
+            return;
         }
+
+        await HelperMethods.PollOperationStatus([.. validOps.Keys], completedOperations, location, subscription);
+
+        var completedCount = completedOperations.Count;
+        var succeededCount = completedOperations.Values.Count(op => op.State == ScheduledActionOperationState.Succeeded);
+        var failedCount = completedOperations.Values.Count(op => op.State == ScheduledActionOperationState.Failed);
+        var cancelledCount = completedOperations.Values.Count(op => op.State == ScheduledActionOperationState.Cancelled);
+
+        Console.WriteLine(
+            $"Final status: valid={validOps.Count}, completed={completedCount}, succeeded={succeededCount}, failed={failedCount}, cancelled={cancelledCount}.");
     }
 }
