@@ -84,13 +84,20 @@ AZURE_VM_ADMIN_PASSWORD=<strong-password>
 cd src
 dotnet build
 
-# Run a specific project
-dotnet run --project ExecuteCreateFlex
-dotnet run --project ExecuteCreate
-dotnet run --project ExecuteStart
-dotnet run --project ExecuteDeallocate
-dotnet run --project ExecuteDelete
-dotnet run --project ExecuteHibernate
+# Run a specific project from the repository root
+dotnet run --project src/ExecuteCreateFlex/ExecuteCreateFlex.csproj -- --api-demo --resource-count 5
+dotnet run --project src/ExecuteCreate/ExecuteCreate.csproj
+dotnet run --project src/ExecuteStart/ExecuteStart.csproj
+dotnet run --project src/ExecuteDeallocate/ExecuteDeallocate.csproj
+dotnet run --project src/ExecuteDelete/ExecuteDelete.csproj
+dotnet run --project src/ExecuteHibernate/ExecuteHibernate.csproj
+
+# Or, if you are already in src/
+dotnet run --project ./ExecuteCreateFlex/ExecuteCreateFlex.csproj -- --batch-demo --resource-count 200
+
+# Or, if you are already in src/ExecuteCreateFlex/
+dotnet run ./Program.cs -- --api-demo --resource-count 5
+dotnet run ./Program.cs -- --batch-demo --resource-count 200
 ```
 
 ## Project Structure
