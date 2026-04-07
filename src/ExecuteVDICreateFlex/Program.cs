@@ -1,10 +1,10 @@
-namespace ExecuteCreateFlex;
+namespace ExecuteVDICreateFlex;
 
 public static class Program
 {
     public static async Task Main(string[] args)
     {
-        Console.WriteLine("Starting ExecuteCreateFlex sample.");
+        Console.WriteLine("Starting ExecuteVDICreateFlex sample.");
 
         var resourceCountOverride = TryParseResourceCount(args);
         var runBatchDemo = args.Contains("--batch-demo", StringComparer.OrdinalIgnoreCase)
@@ -25,7 +25,7 @@ public static class Program
         if (runBatchDemo)
         {
             Console.WriteLine("Running batch demo.");
-            await ExecuteCreateFlexBatchDemo.RunAsync(resourceCountOverride);
+            await ExecuteVDICreateFlexBatchDemo.RunAsync(resourceCountOverride);
             return;
         }
 
@@ -39,7 +39,7 @@ public static class Program
         }
 
         Console.WriteLine("Running API demo.");
-        await ExecuteCreateFlexApiDemo.RunAsync(resourceCountOverride);
+        await ExecuteVDICreateFlexApiDemo.RunAsync(resourceCountOverride);
     }
 
     private static int? TryParseResourceCount(string[] args)

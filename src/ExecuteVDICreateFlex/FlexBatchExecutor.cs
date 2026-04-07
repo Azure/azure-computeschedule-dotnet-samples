@@ -4,7 +4,7 @@ using Azure.ResourceManager.Resources;
 using System.Diagnostics;
 using UtilityMethods;
 
-namespace ExecuteCreateFlex;
+namespace ExecuteVDICreateFlex;
 
 internal static class FlexBatchExecutor
 {

@@ -1,9 +1,9 @@
 using Azure.Identity;
 using UtilityMethods;
 
-namespace ExecuteCreateFlex;
+namespace ExecuteVDICreateFlex;
 
-internal static class ExecuteCreateFlexBatchDemo
+internal static class ExecuteVDICreateFlexBatchDemo
 {
     private static readonly HashSet<string> s_blockedOperationErrors =
         ["SchedulingOperationsBlockedException", "NonSchedulingOperationsBlockedException"];

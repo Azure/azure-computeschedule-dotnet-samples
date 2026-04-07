@@ -9,7 +9,7 @@ The samples are intentionally small and focused. Each project folder represents 
 | Project | What it demonstrates |
 |---|---|
 | `ExecuteCreate` | Standard VM create flow with network and disk setup |
-| `ExecuteCreateFlex` | Flex create flow with API and batch demo modes |
+| `ExecuteVDICreateFlex` | VDI Flex create flow with API and batch demo modes |
 | `ExecuteStart` | Start existing VMs |
 | `ExecuteDeallocate` | Deallocate existing VMs |
 | `ExecuteDelete` | Delete existing VMs |
@@ -77,7 +77,7 @@ Use the project file path for whichever sample you want to run:
 
 ```bash
 dotnet run --project src/ExecuteCreate/ExecuteCreate.csproj
-dotnet run --project src/ExecuteCreateFlex/ExecuteCreateFlex.csproj -- --api-demo --resource-count 5
+dotnet run --project src/ExecuteVDICreateFlex/ExecuteVDICreateFlex.csproj -- --api-demo --resource-count 5
 dotnet run --project src/ExecuteStart/ExecuteStart.csproj
 dotnet run --project src/ExecuteDeallocate/ExecuteDeallocate.csproj
 dotnet run --project src/ExecuteDelete/ExecuteDelete.csproj
@@ -90,7 +90,7 @@ dotnet run --project src/AllScenarios/AllScenarios.csproj
 
 ```bash
 dotnet run --project ./ExecuteCreate/ExecuteCreate.csproj
-dotnet run --project ./ExecuteCreateFlex/ExecuteCreateFlex.csproj -- --api-demo --resource-count 5
+dotnet run --project ./ExecuteVDICreateFlex/ExecuteVDICreateFlex.csproj -- --api-demo --resource-count 5
 dotnet run --project ./ExecuteStart/ExecuteStart.csproj
 dotnet run --project ./ExecuteDeallocate/ExecuteDeallocate.csproj
 dotnet run --project ./ExecuteDelete/ExecuteDelete.csproj
@@ -107,7 +107,7 @@ In any sample folder under `src/<ProjectName>`, you can usually run:
 dotnet run
 ```
 
-Some projects support additional command-line arguments. For example, `ExecuteCreateFlex` can be run with:
+Some projects support additional command-line arguments. For example, `ExecuteVDICreateFlex` can be run with:
 
 ```bash
 dotnet run -- --api-demo --resource-count 5
@@ -124,7 +124,7 @@ For detailed setup, configuration, and usage instructions, check the documentati
 src/
 ├── Common/
 ├── ExecuteCreate/
-├── ExecuteCreateFlex/
+├── ExecuteVDICreateFlex/
 ├── ExecuteStart/
 ├── ExecuteDeallocate/
 ├── ExecuteDelete/
@@ -137,8 +137,9 @@ src/
 
 ## Documentation
 
-- [src/ExecuteCreateFlex/README.md](./src/ExecuteCreateFlex/README.md): setup and run instructions for the Flex sample
-- [src/ExecuteCreateFlex/rest-api-documentation.md](./src/ExecuteCreateFlex/rest-api-documentation.md): Flex create request and response reference
+- [src/ExecuteVDICreateFlex/README.md](./src/ExecuteVDICreateFlex/README.md): setup and run instructions for the ExecuteVDICreateFlex sample
+- [src/ExecuteVDICreateFlex/rest-api-documentation.md](./src/ExecuteVDICreateFlex/rest-api-documentation.md): ExecuteVDICreateFlex request and response reference
+- [src/ExecuteDeallocate/docs/deallocate-preempts-start.md](./src/ExecuteDeallocate/docs/deallocate-preempts-start.md): behavior and API semantics when deallocate preempts a pending or in-progress start
 - [src/OperationFallback/README.md](./src/OperationFallback/README.md): retry policy and `onFailureAction` fallback scenarios
 
 ## Shared Code

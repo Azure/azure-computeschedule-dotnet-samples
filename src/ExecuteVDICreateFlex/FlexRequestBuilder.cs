@@ -1,7 +1,7 @@
 using Azure.ResourceManager.ComputeSchedule.Models;
 using UtilityMethods;
 
-namespace ExecuteCreateFlex;
+namespace ExecuteVDICreateFlex;
 
 /// <summary>
 /// Builds the request objects needed to call the ExecuteCreateFlex API.

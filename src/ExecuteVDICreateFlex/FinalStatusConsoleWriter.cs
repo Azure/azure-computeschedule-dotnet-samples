@@ -1,4 +1,4 @@
-namespace ExecuteCreateFlex;
+namespace ExecuteVDICreateFlex;
 
 internal static class FinalStatusConsoleWriter
 {

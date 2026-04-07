@@ -7,9 +7,9 @@ using Azure.ResourceManager.ComputeSchedule.Models;
 using Azure.ResourceManager.Resources;
 using UtilityMethods;
 
-namespace ExecuteCreateFlex;
+namespace ExecuteVDICreateFlex;
 
-internal static class ExecuteCreateFlexApiDemo
+internal static class ExecuteVDICreateFlexApiDemo
 {
     public static async Task RunAsync(int? resourceCountOverride = null)
     {

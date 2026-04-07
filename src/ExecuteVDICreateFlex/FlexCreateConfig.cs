@@ -1,4 +1,4 @@
-namespace ExecuteCreateFlex;
+namespace ExecuteVDICreateFlex;
 
 /// <summary>
 /// Holds all configuration values needed to run the ExecuteCreateFlex operation,
@@ -67,6 +67,8 @@ internal record FlexCreateConfig(
             for (var i = 0; i < 10; i++)
             {
                 candidatePaths.Add(Path.Combine(current, ".env"));
+                candidatePaths.Add(Path.Combine(current, "ExecuteVDICreateFlex", ".env"));
+                candidatePaths.Add(Path.Combine(current, "src", "ExecuteVDICreateFlex", ".env"));
                 candidatePaths.Add(Path.Combine(current, "ExecuteCreateFlex", ".env"));
                 candidatePaths.Add(Path.Combine(current, "src", "ExecuteCreateFlex", ".env"));
 
