@@ -48,9 +48,9 @@ Within `resourceConfigParameters`, clients define a reusable base VM profile, a 
 | Field               | Type    | Required | Description                                                                      | Notes                                                                                                           |
 | --------------------- | --------- | ---------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | `baseProfile`       | object  | Yes      | Defines the shared VM template used as the starting point for created resources. | Includes location, resource group, identity, compute, storage, OS, and network settings.                        |
-| `resourceOverrides` | array   | Yes      | Per-resource override objects applied on top of`baseProfile`.                    | Scheduled Actions usage populates one object per resource, with observed fields including`name` and `location`. |
-| `resourceCount`     | integer | Yes      | Number of resources to create.                                                   | Examples use a placeholder such as`{{resourceCount}}`.                                                          |
-| `resourcePrefix`    | string  | Yes      | Prefix used to name created resources.                                           | Examples append a scenario suffix such as`-1`, `-2`, or `-14`.                                                  |
+| `resourceOverrides` | array   | Yes      | Per-resource override objects applied on top of `baseProfile`.                    | Scheduled Actions usage populates one object per resource, with observed fields including `name` and `location`. |
+| `resourceCount`     | integer | Yes      | Number of resources to create.                                                   | Examples use a placeholder such as `{{resourceCount}}`.                                                          |
+| `resourcePrefix`    | string  | Yes      | Prefix used to name created resources.                                           | Examples append a scenario suffix such as `-1`, `-2`, or `-14`.                                                  |
 | `flexProperties`    | object  | Yes      | Defines Flex-specific placement and priority behavior.                           | This is the primary block for SKU, zone, and Spot selection.                                                    |
 
 ## Base Profile
@@ -67,13 +67,13 @@ Within `resourceConfigParameters`, clients define a reusable base VM profile, a 
 | `capacityType`                                | string  | Yes      | `VM`                                                         | Capacity mode for the request.                                                 |
 | `vmSizeProfiles`                              | array   | Yes      | One or more VM size entries                                  | Ordered list of preferred VM SKUs.                                             |
 | `vmSizeProfiles[].name`                       | string  | Yes      | `Standard_D2ads_v5`, `Standard_E2ads_v5`, `Standard_D2ds_v5` | VM SKU name to consider.   max 10.                                             |
-| `vmSizeProfiles[].rank`                       | integer | No       | `0`, `1`, `2`                                                | Allowed only when`priorityProfile.allocationStrategy` is `Prioritized`.        |
+| `vmSizeProfiles[].rank`                       | integer | No       | `0`, `1`, `2`                                                | Allowed only when `priorityProfile.allocationStrategy` is `Prioritized`.        |
 | `osType`                                      | string  | Yes      | `Windows`, `Linux`                                           | OS type aligned with the base profile image and OS settings.                   |
 | `priorityProfile.type`                        | string  | Yes      | `Regular`                                                    | Capacity purchase model.                                                       |
 | `priorityProfile.allocationStrategy`          | string  | Yes      | `Regular`: `Prioritized`, `LowestPrice`                      | Allowed values depend on`priorityProfile.type`.                                |
-| `zoneAllocationPolicy.distributionStrategy`   | string  | No       | `Prioritized`, `BestEffortSingleZone`                        | If`zoneAllocationPolicy` is provided, top-level `zones` must also be provided. |
+| `zoneAllocationPolicy.distributionStrategy`   | string  | No       | `Prioritized`, `BestEffortSingleZone`                        | If `zoneAllocationPolicy` is provided, top-level `zones` must also be provided. |
 | `zoneAllocationPolicy.zonePreferences[].zone` | string  | No       | `1`, `2`, `3`                                                | Each zone must also appear in the top-level`zones` list.                       |
-| `zoneAllocationPolicy.zonePreferences[].rank` | integer | No       | `0`, `1`, `2`, `3`                                           | Required for every`zonePreferences` entry when `zonePreferences` is supplied.  |
+| `zoneAllocationPolicy.zonePreferences[].rank` | integer | No       | `0`, `1`, `2`, `3`                                           | Required for every `zonePreferences` entry when `zonePreferences` is supplied.  |
 
 ### Supported values shown in current examples
 
@@ -337,12 +337,12 @@ The following sample is anonymized. Replace placeholder values with your own sub
 | -------------------------- | -------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `operationId`            | string | Unique ID for the scheduled create operation.      | Primary tracking key for follow-up status calls.                                                                  |
 | `resourceId`             | string | ARM ID of the VM tied to the operation.            | Usually matches`results[].resourceId`.                                                                            |
-| `opType`                 | string | Operation type.                                    | Sync create responses are expected to return`Create`.                                                             |
+| `opType`                 | string | Operation type.                                    | Sync create responses are expected to return `Create`.                                                             |
 | `subscriptionId`         | string | Subscription associated with the operation.        | Copied into the operation record for tracking.                                                                    |
 | `deadline`               | string | Timestamp associated with the scheduled operation. | Returned as an offset datetime.                                                                                   |
-| `deadlineType`           | string | Deadline interpretation.                           | Current models define values such as`InitiateAt`.                                                                 |
-| `state`                  | string | Current operation state.                           | On the sync path this can be`PendingScheduling`; terminal states (Succeeded, Cancelled, Failed) are reached later. |
-| `timeZone`               | string | Time zone used for the operation deadline.         | Example:`UTC`.                                                                                                    |
+| `deadlineType`           | string | Deadline interpretation.                           | Current models define values such as `InitiateAt`.                                                                 |
+| `state`                  | string | Current operation state.                           | On the sync path this can be `PendingScheduling`; terminal states (Succeeded, Cancelled, Failed) are reached later. |
+| `timeZone`               | string | Time zone used for the operation deadline.         | Example: `UTC`.                                                                                                    |
 | `retryPolicy`            | object | Retry policy captured on the operation.            | Reflects the operation record, not necessarily the exact request payload if the service applies defaults.         |
 | `resourceOperationError` | object | Operation-level error details.                     | May appear on later status responses if the operation fails.                                                      |
 | `completedAt`            | string | Completion timestamp.                              | Typically absent on the initial sync response and present only after completion.                                  |
@@ -360,11 +360,10 @@ The following sample is anonymized. Replace placeholder values with your own sub
 
 | Question                                     | Guidance                                                                                                              |
 | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| When should I include`zones`?                | Include`baseProfile.zones` when you want a zonal request. Regional examples omit it entirely.                         |
-| When should I include`zoneAllocationPolicy`? | Include it when zone distribution or zone ordering matters. Current examples only show this block in zonal scenarios. |
-| When is`vmSizeProfiles[].rank` useful?       | Ranked entries appear in prioritized examples and help express preference order across multiple SKUs.                 |
-| How do Windows and Linux requests differ?    | Update`imageReference`, `osProfile`, `osDisk.diskSizeGB`, and `flexProperties.osType` together.                       |
-| What does`maxPricePerVM = -1` mean?          | The validator treats`-1` as the sentinel for no price cap.                                                            |
+| When should I include `zones`?                | Include `baseProfile.zones` when you want a zonal request. Regional examples omit it entirely.                         |
+| When should I include `zoneAllocationPolicy`? | Include it when zone distribution or zone ordering matters. Current examples only show this block in zonal scenarios. |
+| When is `vmSizeProfiles[].rank` useful?       | Ranked entries appear in prioritized examples and help express preference order across multiple SKUs.                 |
+| How do Windows and Linux requests differ?    | Update `imageReference`, `osProfile`, `osDisk.diskSizeGB`, and `flexProperties.osType` together.                       |
 
 ## Summary
 
@@ -384,10 +383,6 @@ Yes, unless `priorityProfile.allocationStrategy` is `Prioritized`. The validator
 **Q: Do I need `zoneAllocationPolicy` whenever I specify zones?**
 
 No. But if you do specify `zoneAllocationPolicy`, the validator requires top-level `zones` to be present. If the distribution strategy is `Prioritized`, `zonePreferences` are also required.
-
-**Q: Should Windows and Linux use the same `osProfile` shape?**
-
-No. Windows examples use `windowsConfiguration`, while Linux examples use `linuxConfiguration.disablePasswordAuthentication`.
 
 **Q: What fields change between regional and zonal requests?**
 
