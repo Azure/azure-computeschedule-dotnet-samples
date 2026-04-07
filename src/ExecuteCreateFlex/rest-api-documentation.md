@@ -342,7 +342,7 @@ The following sample is anonymized. Replace placeholder values with your own sub
 | `subscriptionId`         | string | Subscription associated with the operation.        | Copied into the operation record for tracking.                                                                    |
 | `deadline`               | string | Timestamp associated with the scheduled operation. | Returned as an offset datetime.                                                                                   |
 | `deadlineType`           | string | Deadline interpretation.                           | Current models define values such as`InitiateAt`.                                                                 |
-| `state`                  | string | Current operation state.                           | On the sync path this can be`PendingScheduling`; terminal states (Succeeded, Canceled, Failed) are reached later. |
+| `state`                  | string | Current operation state.                           | On the sync path this can be`PendingScheduling`; terminal states (Succeeded, Cancelled, Failed) are reached later. |
 | `timeZone`               | string | Time zone used for the operation deadline.         | Example:`UTC`.                                                                                                    |
 | `retryPolicy`            | object | Retry policy captured on the operation.            | Reflects the operation record, not necessarily the exact request payload if the service applies defaults.         |
 | `resourceOperationError` | object | Operation-level error details.                     | May appear on later status responses if the operation fails.                                                      |
