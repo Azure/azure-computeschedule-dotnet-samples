@@ -364,7 +364,6 @@ The following sample is anonymized. Replace placeholder values with your own sub
 | When should I include `zoneAllocationPolicy`? | Include it when zone distribution or zone ordering matters. Current examples only show this block in zonal scenarios. |
 | When is `vmSizeProfiles[].rank` useful?       | Ranked entries appear in prioritized examples and help express preference order across multiple SKUs.                 |
 | How do Windows and Linux requests differ?    | Update `imageReference`, `osProfile`, `osDisk.diskSizeGB`, and `flexProperties.osType` together.                       |
-| What does `maxPricePerVM = -1` mean?          | The validator treats `-1` as the sentinel for no price cap.                                                            |
 
 ## Summary
 
@@ -374,7 +373,6 @@ The following sample is anonymized. Replace placeholder values with your own sub
 | `baseProfile`         | Defines the reusable VM template including compute, storage, OS, identity, and networking. |
 | `flexProperties`      | Defines placement, SKU preference, priority mode, zone policy, and Spot behavior.          |
 | `executionParameters` | Defines execution-time retry settings.                                                     |
-| `correlationId`       | Provides client-controlled request tracking and diagnostics.                               |
 
 ## Common Questions
 
@@ -385,10 +383,6 @@ Yes, unless `priorityProfile.allocationStrategy` is `Prioritized`. The validator
 **Q: Do I need `zoneAllocationPolicy` whenever I specify zones?**
 
 No. But if you do specify `zoneAllocationPolicy`, the validator requires top-level `zones` to be present. If the distribution strategy is `Prioritized`, `zonePreferences` are also required.
-
-**Q: Should Windows and Linux use the same `osProfile` shape?**
-
-No. Windows examples use `windowsConfiguration`, while Linux examples use `linuxConfiguration.disablePasswordAuthentication`.
 
 **Q: What fields change between regional and zonal requests?**
 
