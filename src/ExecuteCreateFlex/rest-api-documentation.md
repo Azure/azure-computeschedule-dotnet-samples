@@ -1,6 +1,6 @@
 # VDI Execute Flex Create Configuration for Scheduled Actions
 
-This guide explains how to configure a Flex create request for Scheduled Actions. The request body allows clients to define a base VM profile, choose Flex placement behavior, control execution-time retry settings, and attach a correlation identifier for tracking.
+This guide explains how to configure a Flex create request for Scheduled Actions. The request body allows clients to define a base VM profile, choose Flex placement behavior and control execution-time retry settings.
 
 ## Endpoint Format
 
@@ -193,8 +193,7 @@ This section includes a representative set of payloads that cover the main patte
       "retryCount": 1,
       "retryWindowInMinutes": 60
     }
-  },
-  "correlationId": "{{$guid}}"
+  }
 }
 ```
 
@@ -375,7 +374,6 @@ The following sample is anonymized. Replace placeholder values with your own sub
 | `baseProfile`         | Defines the reusable VM template including compute, storage, OS, identity, and networking. |
 | `flexProperties`      | Defines placement, SKU preference, priority mode, zone policy, and Spot behavior.          |
 | `executionParameters` | Defines execution-time retry settings.                                                     |
-| `correlationId`       | Provides client-controlled request tracking and diagnostics.                               |
 
 ## Common Questions
 
