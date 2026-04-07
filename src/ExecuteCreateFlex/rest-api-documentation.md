@@ -185,7 +185,7 @@ This section includes a representative set of payloads that cover the main patte
       "priorityProfile": {
         "type": "Regular",
         "allocationStrategy": "Prioritized"
-      },
+      }
     }
   },
   "executionParameters": {
