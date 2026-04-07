@@ -132,7 +132,7 @@ This section includes a representative set of payloads that cover the main patte
       "ResourceGroupName": "{{resourceGroupName}}",
       "ComputeAPIVersion": "2025-04-01",
       "tags": {
-        "<key>": "<value>",
+        "<key>": "<value>"
       },
       "identity": { "type": "SystemAssigned" },
       "properties": {
@@ -185,7 +185,7 @@ This section includes a representative set of payloads that cover the main patte
       "priorityProfile": {
         "type": "Regular",
         "allocationStrategy": "Prioritized"
-      },
+      }
     }
   },
   "executionParameters": {
