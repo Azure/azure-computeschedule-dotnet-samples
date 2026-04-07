@@ -55,7 +55,7 @@ Within `resourceConfigParameters`, clients define a reusable base VM profile, a 
 
 ## Base Profile
 
-`baseProfile` defines the base VM configuration before Flex-specific placement rules are applied. For more details about fields go to [Virtual Machines - Create Or Update](https://learn.microsoft.com/en-us/rest/api/compute/virtual-machines/create-or-update?view=rest-compute-2025-04-01&tabs=HTTP#create-a-custom-image-vm-from-an-unmanaged-generalized-os-image.).
+`baseProfile` defines the base VM configuration before Flex-specific placement rules are applied. For more details about fields go to [Virtual Machines - Create Or Update](https://learn.microsoft.com/en-us/rest/api/compute/virtual-machines/create-or-update?view=rest-compute-2025-04-01&tabs=HTTP#create-a-custom-image-vm-from-an-unmanaged-generalized-os-image).
 
 ## Flex Properties
 
@@ -205,7 +205,7 @@ This section includes a representative set of payloads that cover the main patte
     "baseProfile": {
       "location": "{{location}}",
       "ResourceGroupName": "{{resourceGroupName}}",
-      "ComputeAPIVersion": "2022-11-01",
+      "ComputeAPIVersion": "2025-04-01",
       "tags": {
         "azsecpack": "nonprod",
         "platformsettings.host_environment.service.platform_optedin_for_rootcerts": "true"
