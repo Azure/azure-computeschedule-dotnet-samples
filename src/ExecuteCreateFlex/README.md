@@ -4,6 +4,10 @@ This sample demonstrates the Azure Compute Schedule Flex create flow for virtual
 
 Use this README for setup and execution steps. REST payload and response details live in [rest-api-documentation.md](./rest-api-documentation.md).
 
+## Documentation
+
+- [rest-api-documentation.md](./rest-api-documentation.md): request and response reference for the Flex create API
+
 ## What This Sample Does
 
 - Authenticates with Azure using `DefaultAzureCredential`
@@ -22,7 +26,9 @@ Use this README for setup and execution steps. REST payload and response details
 
 ## Configuration
 
-This sample loads settings from a local `.env` file in this folder.
+This sample loads settings from a local `.env` file or environment variables.
+
+The loader searches for `.env` from the current working directory and parent directories, so the sample can be run from the repository root, `src`, or the project folder.
 
 1. Copy `.env.example` to `.env`.
 2. Fill in the required values.
@@ -106,9 +112,12 @@ dotnet run -- --batch-demo --resource-count 200
 
 - `--api-demo`: runs the direct API demo
 - `--batch-demo`: runs the batch demo
+- `--batch-request-demo`: alias for `--batch-demo`
 - `--resource-count <n>`: overrides the default requested VM count
 
 Only one demo mode should be passed at a time.
+
+If no demo mode is provided, the sample prints the supported `dotnet run -- ...` usage examples and exits.
 
 ## Expected Behavior
 
@@ -118,6 +127,8 @@ Only one demo mode should be passed at a time.
 
 ## Troubleshooting
 
+- If you run from `src/ExecuteCreateFlex`, use `dotnet run -- ...`. `dotnet run Program.cs` is not the standard SDK-style invocation for this project.
+- If you run from `src`, use `dotnet run --project ./ExecuteCreateFlex/ExecuteCreateFlex.csproj -- ...`.
 - If authentication fails, run `az login` and confirm the expected subscription is available.
 - If configuration loading fails, verify that `.env` exists in this folder and contains valid values.
 - If package restore fails, check `src/NuGet.config` and your feed access.
