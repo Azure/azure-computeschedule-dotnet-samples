@@ -2,7 +2,7 @@
 
 This sample demonstrates the Azure Compute Schedule Flex create flow for virtual machines.
 
-Use this README for setup and execution steps. REST payload and response details live in `rest-api-documentation.md`.
+Use this README for setup and execution steps. REST payload and response details live in [rest-api-documentation.md](./rest-api-documentation.md).
 
 ## What This Sample Does
 
@@ -124,7 +124,7 @@ Only one demo mode should be passed at a time.
 
 ## Related Files
 
-- `rest-api-documentation.md`: request and response documentation for the Flex create REST API
+- [rest-api-documentation.md](./rest-api-documentation.md): request and response documentation for the Flex create REST API
 - `Program.cs`: entry point and CLI argument handling
 - `ApiDemo.cs`: direct API demo flow
 - `BatchDemo.cs`: batch demo flow
