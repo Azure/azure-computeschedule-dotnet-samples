@@ -127,8 +127,8 @@ If no demo mode is provided, the sample prints the supported `dotnet run -- ...`
 
 ## Troubleshooting
 
-- If you run from `src/ExecuteCreateFlex`, use `dotnet run -- ...`. `dotnet run .\Program.cs` is not the standard SDK-style invocation for this project.
-- If you run from `src`, use `dotnet run --project .\ExecuteCreateFlex\ExecuteCreateFlex.csproj -- ...`.
+- If you run from `src/ExecuteCreateFlex`, use `dotnet run -- ...`. `dotnet run Program.cs` is not the standard SDK-style invocation for this project.
+- If you run from `src`, use `dotnet run --project ./ExecuteCreateFlex/ExecuteCreateFlex.csproj -- ...`.
 - If authentication fails, run `az login` and confirm the expected subscription is available.
 - If configuration loading fails, verify that `.env` exists in this folder and contains valid values.
 - If package restore fails, check `src/NuGet.config` and your feed access.
