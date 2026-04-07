@@ -32,7 +32,6 @@ internal static class ArmClientFactory
     /// </summary>
     /// <param name="credential">The Azure credential used to authenticate.</param>
     /// <param name="subscriptionId">The Azure subscription ID.</param>
-    /// </param>
     public static ArmClient CreateScheduleClient(TokenCredential credential, string subscriptionId)
     {
         return new ArmClient(credential, subscriptionId);
