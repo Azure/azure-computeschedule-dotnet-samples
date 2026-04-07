@@ -14,6 +14,7 @@ The samples are intentionally small and focused. Each project folder represents 
 | `ExecuteDeallocate` | Deallocate existing VMs |
 | `ExecuteDelete` | Delete existing VMs |
 | `ExecuteHibernate` | Hibernate existing VMs |
+| `OperationFallback` | Retry and fallback scenarios for start, hibernate, and create operations |
 | `AllScenarios` | Combined example flow using shared helpers |
 
 ## Prerequisites
@@ -48,6 +49,7 @@ Review the project folder for the sample you want to run and apply the configura
 Depending on the sample, that may involve:
 
 - setting environment variables or a local `.env` file
+- updating `appsettings.json`
 - updating sample values in `Program.cs`
 - replacing sample VM names, resource IDs, subscription IDs, or resource group names
 
@@ -80,6 +82,7 @@ dotnet run --project src/ExecuteStart/ExecuteStart.csproj
 dotnet run --project src/ExecuteDeallocate/ExecuteDeallocate.csproj
 dotnet run --project src/ExecuteDelete/ExecuteDelete.csproj
 dotnet run --project src/ExecuteHibernate/ExecuteHibernate.csproj
+dotnet run --project src/OperationFallback/OperationFallback.csproj
 dotnet run --project src/AllScenarios/AllScenarios.csproj
 ```
 
@@ -92,6 +95,7 @@ dotnet run --project ./ExecuteStart/ExecuteStart.csproj
 dotnet run --project ./ExecuteDeallocate/ExecuteDeallocate.csproj
 dotnet run --project ./ExecuteDelete/ExecuteDelete.csproj
 dotnet run --project ./ExecuteHibernate/ExecuteHibernate.csproj
+dotnet run --project ./OperationFallback/OperationFallback.csproj
 dotnet run --project ./AllScenarios/AllScenarios.csproj
 ```
 
@@ -125,6 +129,7 @@ src/
 ├── ExecuteDeallocate/
 ├── ExecuteDelete/
 ├── ExecuteHibernate/
+├── OperationFallback/
 ├── AllScenarios/
 ├── NuGet.config
 └── azure-computeschedule-dotnet-samples.sln
@@ -132,8 +137,9 @@ src/
 
 ## Documentation
 
-- `src/ExecuteCreateFlex/README.md`: setup and run instructions for the Flex sample
-- `src/ExecuteCreateFlex/rest-api-documentation.md`: Flex create request and response reference
+- [src/ExecuteCreateFlex/README.md](./src/ExecuteCreateFlex/README.md): setup and run instructions for the Flex sample
+- [src/ExecuteCreateFlex/rest-api-documentation.md](./src/ExecuteCreateFlex/rest-api-documentation.md): Flex create request and response reference
+- [src/OperationFallback/README.md](./src/OperationFallback/README.md): retry policy and `onFailureAction` fallback scenarios
 
 ## Shared Code
 
