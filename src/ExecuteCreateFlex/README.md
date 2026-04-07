@@ -79,7 +79,7 @@ dotnet run --project .\ExecuteCreateFlex\ExecuteCreateFlex.csproj -- --api-demo 
 From the `src/ExecuteCreateFlex` directory:
 
 ```powershell
-dotnet run .\Program.cs -- --api-demo --resource-count 5
+dotnet run -- --api-demo --resource-count 5
 ```
 
 ### Batch demo
@@ -99,7 +99,7 @@ dotnet run --project .\ExecuteCreateFlex\ExecuteCreateFlex.csproj -- --batch-dem
 From the `src/ExecuteCreateFlex` directory:
 
 ```powershell
-dotnet run .\Program.cs -- --batch-demo --resource-count 200
+dotnet run -- --batch-demo --resource-count 200
 ```
 
 ## Command-Line Options
