@@ -1,121 +1,145 @@
 # Azure Compute Schedule .NET Samples
 
-This project demonstrates how to use the Azure ComputeSchedule SDK to automate virtual machine lifecycle operations using scheduled actions.
+This repository contains .NET samples for Azure Compute Schedule operations such as create, start, deallocate, delete, hibernate, and Flex create.
+
+The samples are intentionally small and focused. Each project folder represents a self-contained sample and may use its own configuration pattern depending on the scenario it demonstrates.
 
 ## Projects
 
-| Project | Description |
+| Project | What it demonstrates |
 |---|---|
-| `ExecuteCreate` | Create VMs via ComputeSchedule with a standard provisioning payload |
-| `ExecuteCreateFlex` | Create VMs using the Flex API — prioritized VM size fallbacks for flexible allocation |
-| `ExecuteStart` | Start existing VMs via ComputeSchedule |
-| `ExecuteDeallocate` | Deallocate VMs via ComputeSchedule |
-| `ExecuteDelete` | Delete VMs via ComputeSchedule |
-| `ExecuteHibernate` | Hibernate VMs via ComputeSchedule |
-| `AllScenarios` | Combines multiple operations in a single runnable program |
-
-## Features
-
-- Authenticate with Azure using `DefaultAzureCredential`
-- Create, start, deallocate, delete, and hibernate virtual machines via scheduled actions
-- Flex provisioning: specify prioritized VM size profiles — ComputeSchedule picks the best available SKU
-- Automatically creates a virtual network and subnet before VM provisioning
-- Handles operation polling, terminal-state detection, and error scenarios
-- Demonstrates retry policies for scheduled actions
-- Configurable via `.env` file (no hardcoded secrets)
+| `ExecuteCreate` | Standard VM create flow with network and disk setup |
+| `ExecuteCreateFlex` | Flex create flow with API and batch demo modes |
+| `ExecuteStart` | Start existing VMs |
+| `ExecuteDeallocate` | Deallocate existing VMs |
+| `ExecuteDelete` | Delete existing VMs |
+| `ExecuteHibernate` | Hibernate existing VMs |
+| `AllScenarios` | Combined example flow using shared helpers |
 
 ## Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - An Azure subscription
-- An existing resource group in Azure
-- Azure CLI installed and logged in (`az login`) — used by `DefaultAzureCredential`
-- NuGet feeds configured (see `src/NuGet.config`):
-  - `nuget.org` — public packages (including `Unofficial.Azure.ResourceManager.ComputeSchedule`)
+- An existing Azure resource group
+- Azure CLI installed and signed in with `az login`
+- NuGet feeds configured through `src/NuGet.config`
 
-## Getting Started
+`DefaultAzureCredential` is used throughout the samples, so `az login` is the simplest way to authenticate locally.
+
+## Quick Start
 
 ### 1. Clone the repository
 
 ```bash
 git clone https://github.com/Azure/azure-computeschedule-dotnet-samples.git
-cd azure-computeschedule-dotnet-samples/src
+cd azure-computeschedule-dotnet-samples
 ```
 
-### 2. Configure credentials
-
-Authenticate with Azure using the Azure CLI:
+### 2. Sign in to Azure
 
 ```bash
 az login
 ```
 
-`DefaultAzureCredential` will pick this up automatically.
+### 3. Choose and configure a sample
 
-### 3. Set up environment variables
+Review the project folder for the sample you want to run and apply the configuration model documented there.
 
-Each project that requires configuration ships with a `.env.example` file. Copy it to `.env` and fill in your values:
+Depending on the sample, that may involve:
 
-```bash
-# Example for ExecuteCreateFlex
-cd src/ExecuteCreateFlex
-cp .env.example .env
-```
+- setting environment variables or a local `.env` file
+- updating sample values in `Program.cs`
+- replacing sample VM names, resource IDs, subscription IDs, or resource group names
 
-Then edit `.env`:
+Sample-specific documentation should be treated as the source of truth for configuration.
 
-```
-AZURE_SUBSCRIPTION_ID=<your-subscription-id>
-AZURE_RESOURCE_GROUP=<your-resource-group>
-AZURE_LOCATION=eastus2euap
-AZURE_VNET_NAME=flex-vnet
-AZURE_SUBNET_NAME=flex-subnet
-AZURE_VM_PREFIX=sampleflex
-AZURE_VM_ADMIN_USERNAME=<admin-username>
-AZURE_VM_ADMIN_PASSWORD=<strong-password>
-```
+## Build
 
-> **Note:** `.env` is in `.gitignore` and will never be committed. Only `.env.example` is tracked.
-
-### 5. Build and run
+From the repository root:
 
 ```bash
-# Build the entire solution
-cd src
+dotnet build src/azure-computeschedule-dotnet-samples.sln
+```
+
+From `src`:
+
+```bash
 dotnet build
+```
 
-# Run a specific project from the repository root
-dotnet run --project src/ExecuteCreateFlex/ExecuteCreateFlex.csproj -- --api-demo --resource-count 5
+## Run Samples
+
+### From the repository root
+
+Use the project file path for whichever sample you want to run:
+
+```bash
 dotnet run --project src/ExecuteCreate/ExecuteCreate.csproj
+dotnet run --project src/ExecuteCreateFlex/ExecuteCreateFlex.csproj -- --api-demo --resource-count 5
 dotnet run --project src/ExecuteStart/ExecuteStart.csproj
 dotnet run --project src/ExecuteDeallocate/ExecuteDeallocate.csproj
 dotnet run --project src/ExecuteDelete/ExecuteDelete.csproj
 dotnet run --project src/ExecuteHibernate/ExecuteHibernate.csproj
+dotnet run --project src/AllScenarios/AllScenarios.csproj
+```
 
-# Or, if you are already in src/
-dotnet run --project ./ExecuteCreateFlex/ExecuteCreateFlex.csproj -- --batch-demo --resource-count 200
+### From `src`
 
-# Or, if you are already in src/ExecuteCreateFlex/
+```bash
+dotnet run --project ./ExecuteCreate/ExecuteCreate.csproj
+dotnet run --project ./ExecuteCreateFlex/ExecuteCreateFlex.csproj -- --api-demo --resource-count 5
+dotnet run --project ./ExecuteStart/ExecuteStart.csproj
+dotnet run --project ./ExecuteDeallocate/ExecuteDeallocate.csproj
+dotnet run --project ./ExecuteDelete/ExecuteDelete.csproj
+dotnet run --project ./ExecuteHibernate/ExecuteHibernate.csproj
+dotnet run --project ./AllScenarios/AllScenarios.csproj
+```
+
+### From an individual project directory
+
+In any sample folder under `src/<ProjectName>`, you can usually run:
+
+```bash
+dotnet run
+```
+
+Some projects support additional command-line arguments. For example, `ExecuteCreateFlex` can be run with:
+
+```bash
 dotnet run -- --api-demo --resource-count 5
 dotnet run -- --batch-demo --resource-count 200
 ```
 
+## Sample Notes
+
+For detailed setup, configuration, and usage instructions, check the documentation and source files in the folder for the sample you want to run.
+
 ## Project Structure
 
-```
+```text
 src/
-├── Common/                   # Shared library: polling, helper methods, operation wrappers
-│   ├── ComputescheduleOperations.cs
-│   ├── HelperMethods.cs
-│   ├── SetHeaderPolicy.cs
-│   └── UtilityMethods.cs
-├── ExecuteCreate/            # Standard VM create operation
-├── ExecuteCreateFlex/        # Flex VM create operation (prioritized size profiles)
-├── ExecuteStart/             # VM start operation
-├── ExecuteDeallocate/        # VM deallocate operation
-├── ExecuteDelete/            # VM delete operation
-├── ExecuteHibernate/         # VM hibernate operation
-├── AllScenarios/             # Combined scenarios
-├── NuGet.config              # Feed configuration (public + private)
+├── Common/
+├── ExecuteCreate/
+├── ExecuteCreateFlex/
+├── ExecuteStart/
+├── ExecuteDeallocate/
+├── ExecuteDelete/
+├── ExecuteHibernate/
+├── AllScenarios/
+├── NuGet.config
 └── azure-computeschedule-dotnet-samples.sln
 ```
+
+## Documentation
+
+- `src/ExecuteCreateFlex/README.md`: setup and run instructions for the Flex sample
+- `src/ExecuteCreateFlex/rest-api-documentation.md`: Flex create request and response reference
+
+## Shared Code
+
+All sample projects reference `src/Common`, which contains the shared helper layer used across the repository:
+
+- `ComputescheduleOperations.cs`: common create, start, deallocate, delete, and hibernate operation flows
+- `HelperMethods.cs`: resource helpers, request builders, VNet creation, data disk creation, and operation polling
+- `ConsoleProgressRenderer.cs`: single-line progress updates for longer-running flows
+- `SetHeaderPolicy.cs`: example of adding a custom ARM pipeline header policy
