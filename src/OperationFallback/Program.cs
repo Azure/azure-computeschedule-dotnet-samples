@@ -50,7 +50,10 @@ public static class Program
                 await HibernateFallbackOnlyNoRetry.RunAsync(subscriptionResource, resourceIds, location);
                 break;
             case "CreateFallback":
-                await CreateWithDeleteFallback.RunAsync(subscriptionResource, location, subscriptionId, resourceGroupName);
+                var createSettings = config.GetSection("Settings:Create");
+                string adminUsername = createSettings["AdminUsername"] ?? throw new InvalidOperationException("Settings:Create:AdminUsername is required in appsettings.json");
+                string adminPassword = createSettings["AdminPassword"] ?? throw new InvalidOperationException("Settings:Create:AdminPassword is required in appsettings.json");
+                await CreateWithDeleteFallback.RunAsync(subscriptionResource, location, subscriptionId, resourceGroupName, adminUsername, adminPassword);
                 break;
             default:
                 Console.WriteLine($"Unknown scenario: {scenario}");

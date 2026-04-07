@@ -25,7 +25,9 @@ public static class CreateWithDeleteFallback
         SubscriptionResource subscriptionResource,
         string location,
         string subscriptionId,
-        string resourceGroupName)
+        string resourceGroupName,
+        string adminUsername,
+        string adminPassword)
     {
         Console.WriteLine("[Scenario] Create with Delete fallback\n");
 
@@ -155,8 +157,8 @@ public static class CreateWithDeleteFallback
                             osProfile = new
                             {
                                 computerName = "demo-vm",
-                                adminUsername = "azureuser",
-                                adminPassword = "YourStr0ngP@ssword123!"
+                                adminUsername = adminUsername,
+                                adminPassword = adminPassword
                             }
                         })
                     }
