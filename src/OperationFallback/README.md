@@ -258,7 +258,7 @@ else:
 
 ## .NET SDK Samples
 
-These samples require `Azure.ResourceManager.ComputeSchedule` version **1.2.0-alpha.20260401.1** or later, which introduces:
+These samples require `Unofficial.Azure.ResourceManager.ComputeSchedule` version **1.2.0-alpha.20260406.1** or later, which introduces:
 - `UserRequestRetryPolicy` with `OnFailureAction` property
 - `FallbackOperationInfo` on `ResourceOperationDetails` for typed fallback results
 
@@ -268,7 +268,7 @@ These samples require `Azure.ResourceManager.ComputeSchedule` version **1.2.0-al
 | [StartWithCleanBootFallback.cs](StartWithCleanBootFallback.cs) | Resume a hibernated VM with automatic clean boot if resume fails |
 | [CreateWithDeleteFallback.cs](CreateWithDeleteFallback.cs) | Create a VM with automatic Delete cleanup if creation fails |
 | [HibernateFallbackOnlyNoRetry.cs](HibernateFallbackOnlyNoRetry.cs) | Hibernate with Deallocate fallback, no retry window (single attempt → fallback) |
-| [OperationStatusHelper.cs](OperationStatusHelper.cs) | Shared helper for polling status and interpreting fallback results |
+| [Program.cs](Program.cs) | Entry point with settings-driven scenario selection |
 
 ---
 
