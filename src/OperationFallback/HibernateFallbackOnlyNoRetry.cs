@@ -37,10 +37,13 @@ public static class HibernateFallbackOnlyNoRetry
 
         var result = await subscriptionResource.ExecuteVirtualMachineHibernateAsync(location, request);
 
-        var operationIds = result.Value.Results
-            .Where(r => r.Operation?.OperationId is not null)
-            .Select(r => r.Operation!.OperationId)
-            .ToHashSet();
+        var operationIds = UtilityMethods.HelperMethods.ExcludeResourcesNotProcessed(result.Value.Results).Keys.ToHashSet();
+
+        if (operationIds.Count == 0)
+        {
+            Console.WriteLine("[Submit] No operations were accepted. Check resource IDs and try again.");
+            return;
+        }
 
         Console.WriteLine($"[Submit] {operationIds.Count} operation(s) submitted. Polling for results...\n");
         var completedOperations = new Dictionary<string, ResourceOperationDetails>();

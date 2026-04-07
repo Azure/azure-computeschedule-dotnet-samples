@@ -39,11 +39,14 @@ public static class HibernateWithDeallocateFallback
         // Submit the hibernate operation
         var result = await subscriptionResource.ExecuteVirtualMachineHibernateAsync(location, request);
 
-        // Collect operation IDs and poll until complete
-        var operationIds = result.Value.Results
-            .Where(r => r.Operation?.OperationId is not null)
-            .Select(r => r.Operation!.OperationId)
-            .ToHashSet();
+        // Exclude resources not processed and collect valid operation IDs
+        var operationIds = UtilityMethods.HelperMethods.ExcludeResourcesNotProcessed(result.Value.Results).Keys.ToHashSet();
+
+        if (operationIds.Count == 0)
+        {
+            Console.WriteLine("[Submit] No operations were accepted. Check resource IDs and try again.");
+            return;
+        }
 
         Console.WriteLine($"[Submit] {operationIds.Count} operation(s) submitted. Polling for results...\n");
         var completedOperations = new Dictionary<string, ResourceOperationDetails>();
