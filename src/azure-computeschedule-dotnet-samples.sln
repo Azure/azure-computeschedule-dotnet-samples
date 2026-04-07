@@ -21,7 +21,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExecuteDeallocate", "Execut
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExecuteHibernate", "ExecuteHibernate\ExecuteHibernate.csproj", "{F66C97AA-74CB-21D0-CEA0-EE3CC81F4CD4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExecuteCreateFlex", "ExecuteCreateFlex\ExecuteCreateFlex.csproj", "{C3F47E8A-1D2B-4A5C-8E9F-B6D7E0C2A439}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExecuteVDICreateFlex", "ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj", "{C3F47E8A-1D2B-4A5C-8E9F-B6D7E0C2A439}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OperationFallback", "OperationFallback\OperationFallback.csproj", "{AE020CB1-B4C9-4494-BF4F-47C9CB1EE247}"
 EndProject

@@ -51,13 +51,13 @@ AZURE_VM_ADMIN_PASSWORD=<strong-password>
 From the repository root:
 
 ```powershell
-dotnet build .\src\ExecuteCreateFlex\ExecuteVDICreateFlex.csproj
+dotnet build .\src\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj
 ```
 
 From the `src` directory:
 
 ```powershell
-dotnet build .\ExecuteCreateFlex\ExecuteVDICreateFlex.csproj
+dotnet build .\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj
 ```
 
 From the project directory:
@@ -73,16 +73,16 @@ dotnet build .\ExecuteVDICreateFlex.csproj
 From the repository root:
 
 ```powershell
-dotnet run --project .\src\ExecuteCreateFlex\ExecuteVDICreateFlex.csproj -- --api-demo --resource-count 5
+dotnet run --project .\src\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --api-demo --resource-count 5
 ```
 
 From the `src` directory:
 
 ```powershell
-dotnet run --project .\ExecuteCreateFlex\ExecuteVDICreateFlex.csproj -- --api-demo --resource-count 5
+dotnet run --project .\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --api-demo --resource-count 5
 ```
 
-From the `src/ExecuteCreateFlex` directory:
+From the `src/ExecuteVDICreateFlex` directory:
 
 ```powershell
 dotnet run -- --api-demo --resource-count 5
@@ -93,16 +93,16 @@ dotnet run -- --api-demo --resource-count 5
 From the repository root:
 
 ```powershell
-dotnet run --project .\src\ExecuteCreateFlex\ExecuteVDICreateFlex.csproj -- --batch-demo --resource-count 200
+dotnet run --project .\src\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --batch-demo --resource-count 200
 ```
 
 From the `src` directory:
 
 ```powershell
-dotnet run --project .\ExecuteCreateFlex\ExecuteVDICreateFlex.csproj -- --batch-demo --resource-count 200
+dotnet run --project .\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --batch-demo --resource-count 200
 ```
 
-From the `src/ExecuteCreateFlex` directory:
+From the `src/ExecuteVDICreateFlex` directory:
 
 ```powershell
 dotnet run -- --batch-demo --resource-count 200
@@ -127,8 +127,8 @@ If no demo mode is provided, the sample prints the supported `dotnet run -- ...`
 
 ## Troubleshooting
 
-- If you run from `src/ExecuteCreateFlex`, use `dotnet run -- ...`. `dotnet run Program.cs` is not the standard SDK-style invocation for this project.
-- If you run from `src`, use `dotnet run --project ./ExecuteCreateFlex/ExecuteVDICreateFlex.csproj -- ...`.
+- If you run from `src/ExecuteVDICreateFlex`, use `dotnet run -- ...`. `dotnet run Program.cs` is not the standard SDK-style invocation for this project.
+- If you run from `src`, use `dotnet run --project ./ExecuteVDICreateFlex/ExecuteVDICreateFlex.csproj -- ...`.
 - If authentication fails, run `az login` and confirm the expected subscription is available.
 - If configuration loading fails, verify that `.env` exists in this folder and contains valid values.
 - If package restore fails, check `src/NuGet.config` and your feed access.
