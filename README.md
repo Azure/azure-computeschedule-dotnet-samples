@@ -96,8 +96,8 @@ dotnet run --project src/ExecuteHibernate/ExecuteHibernate.csproj
 dotnet run --project ./ExecuteCreateFlex/ExecuteCreateFlex.csproj -- --batch-demo --resource-count 200
 
 # Or, if you are already in src/ExecuteCreateFlex/
-dotnet run ./Program.cs -- --api-demo --resource-count 5
-dotnet run ./Program.cs -- --batch-demo --resource-count 200
+dotnet run -- --api-demo --resource-count 5
+dotnet run -- --batch-demo --resource-count 200
 ```
 
 ## Project Structure
