@@ -258,7 +258,7 @@ else:
 
 ## .NET SDK Samples
 
-These samples require `Unofficial.Azure.ResourceManager.ComputeSchedule` version **1.2.0-alpha.20260406.1** or later, which introduces:
+These samples require `Azure.ResourceManager.ComputeSchedule` version **1.2.0-beta.2** or later, which introduces:
 - `UserRequestRetryPolicy` with `OnFailureAction` property
 - `FallbackOperationInfo` on `ResourceOperationDetails` for typed fallback results
 
