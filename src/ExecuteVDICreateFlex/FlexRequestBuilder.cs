@@ -1,3 +1,4 @@
+using Azure.Core;
 using Azure.ResourceManager.ComputeSchedule.Models;
 using UtilityMethods;
 
@@ -28,22 +29,22 @@ internal static class FlexRequestBuilder
         };
 
     /// <summary>
-    /// Returns <see cref="FlexProperties"/> describing the prioritized VM size
-    /// profiles and allocation strategy. ComputeSchedule will attempt each size
-    /// in priority order when the preferred SKU is unavailable.
+    /// Returns <see cref="FlexProperties"/> describing the VM size profiles and
+    /// lowest-price allocation strategy.
     /// </summary>
     public static ComputeScheduleFlexProperties BuildFlexProperties() =>
         new(
             new[]
             {
-                new ComputeScheduleVmSizeProfile(name: "Standard_D2ads_v5", rank: 0),
-                new ComputeScheduleVmSizeProfile(name: "Standard_E4as_v5", rank: 1),
+                new ComputeScheduleVmSizeProfile(name: "Standard_D2ads_v5"),
+                new ComputeScheduleVmSizeProfile(name: "Standard_E2ads_v5"),
+                new ComputeScheduleVmSizeProfile(name: "Standard_D2ds_v5"),
             },
             ComputeScheduleOSType.Windows,
             new ComputeSchedulePriorityProfile
             {
                 Type = ComputeSchedulePriorityType.Regular,
-                AllocationStrategy = ComputeScheduleAllocationStrategy.Prioritized,
+                AllocationStrategy = ComputeScheduleAllocationStrategy.LowestPrice,
             });
 
     /// <summary>
@@ -55,96 +56,109 @@ internal static class FlexRequestBuilder
     public static ResourceProvisionFlexPayload BuildFlexPayload(FlexCreateConfig config, string subnetId, int resourceCount, int batchIndex)
     {
         var batchPrefix = BuildBatchPrefix(config.VmPrefix, batchIndex);
-        var computerName = BuildWindowsComputerName(batchPrefix);
+        var virtualMachineBaseProfile = BuildBaseProfile(subnetId);
+        var virtualMachineOverrides = new List<BulkVmConfiguration>();
+
+        for (var i = 0; i < resourceCount; i++)
+        {
+            var overrideName = BuildWindowsComputerName($"{batchPrefix}vm{i}");
+            virtualMachineOverrides.Add(BuildVmOverride(overrideName, config));
+        }
 
         var payload = new ResourceProvisionFlexPayload(resourceCount: resourceCount, flexProperties: BuildFlexProperties())
         {
             ResourcePrefix = batchPrefix,
+            VirtualMachineBaseProfile = virtualMachineBaseProfile
         };
 
-        payload.BaseProfile["resourceGroupName"] = BinaryData.FromString($"\"{config.ResourceGroupName}\"");
-        payload.BaseProfile["computeApiVersion"] = BinaryData.FromString("\"2023-09-01\"");
-        payload.BaseProfile["location"] = BinaryData.FromString($"\"{config.Location}\"");
-        payload.BaseProfile["properties"] = BinaryData.FromObjectAsJson(new
+        foreach (var virtualMachineOverride in virtualMachineOverrides)
         {
-            hardwareProfile = new { vmSize = "Standard_D2ads_v5" },
-            osProfile = new
-            {
-                computerName = computerName,
-                adminUsername = config.VmAdminUsername,
-                adminPassword = config.VmAdminPassword
-            },
-            storageProfile = new
-            {
-                imageReference = new
-                {
-                    publisher = "MicrosoftWindowsServer",
-                    offer = "WindowsServer",
-                    sku = "2022-datacenter-azure-edition",
-                    version = "latest"
-                },
-                osDisk = new
-                {
-                    osType = "Windows",
-                    createOption = "FromImage",
-                    caching = "ReadWrite",
-                    managedDisk = new { storageAccountType = "Standard_LRS" },
-                    deleteOption = "Delete",
-                    diskSizeGB = 127
-                },
-                diskControllerType = "SCSI"
-            },
-            networkProfile = new
-            {
-                networkInterfaceConfigurations = new[]
-                {
-                    new
-                    {
-                        name = "samplenic",
-                        properties = new
-                        {
-                            primary = true,
-                            enableIPForwarding = true,
-                            ipConfigurations = new[]
-                            {
-                                new
-                                {
-                                    name = "samplenic",
-                                    properties = new
-                                    {
-                                        subnet = new
-                                        {
-                                            id = subnetId,
-                                            properties = new
-                                            {
-                                                defaultOutboundAccess = false
-                                            }
-                                        },
-                                        primary = true,
-                                        applicationGatewayBackendAddressPools = Array.Empty<object>(),
-                                        loadBalancerBackendAddressPools = Array.Empty<object>()
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                networkApiVersion = "2022-07-01"
-            }
-        });
-
-        // Per-VM override: name and admin credentials
-        var overrideName = BuildWindowsComputerName($"{batchPrefix}vm0");
-        var vmOverride = HelperMethods.GenerateResourceOverrideItem(
-            overrideName,
-            config.Location,
-            "Standard_D2ads_v5",
-            config.VmAdminPassword,
-            config.VmAdminUsername);
-        payload.ResourceOverrides.Add(vmOverride);
+            payload.VirtualMachineOverrides.Add(virtualMachineOverride);
+        }
 
         return payload;
     }
+
+    private static BulkVmConfiguration BuildBaseProfile(string subnetId) =>
+        new()
+        {
+            ComputeApiVersion = "2023-09-01",
+            Zones = { "1", "2", "3" },
+            Properties = new BulkActionVirtualMachineProperties
+            {
+                HardwareProfile = new VirtualMachineHardwareProfile { VmSize = "Standard_D2ads_v5" },
+                StorageProfile = new VirtualMachineStorageProfile
+                {
+                    ImageReference = new ImageReference
+                    {
+                        Publisher = "MicrosoftWindowsServer",
+                        Offer = "WindowsServer",
+                        Sku = "2025-datacenter-azure-edition",
+                        Version = "latest"
+                    },
+                    OSDisk = new VirtualMachineOSDisk(DiskCreateOptionType.FromImage)
+                    {
+                        OSType = OperatingSystemType.Windows,
+                        Caching = CachingType.ReadWrite,
+                        ManagedDisk = new ComputeScheduleManagedDiskConfig
+                        {
+                            StorageAccountType = StorageAccountType.StandardLRS
+                        },
+                        DeleteOption = DiskDeleteOptionType.Delete,
+                        DiskSizeGB = 127
+                    },
+                    DiskControllerType = DiskControllerType.SCSI
+                },
+                NetworkProfile = new VirtualMachineNetworkProfile
+                {
+                    NetworkInterfaceConfigurations =
+                    {
+                        new VirtualMachineNetworkInterfaceConfiguration("samplenic")
+                        {
+                            Properties = new VirtualMachineNetworkInterfaceConfigurationProperties(
+                                new[]
+                                {
+                                    new VirtualMachineNetworkInterfaceIPConfiguration("samplenic")
+                                    {
+                                        Properties = new VirtualMachineNetworkInterfaceIPConfigurationProperties
+                                        {
+                                            SubnetId = new ResourceIdentifier(subnetId),
+                                            Primary = true
+                                        }
+                                    }
+                                })
+                            {
+                                Primary = true,
+                                EnableIPForwarding = true
+                            }
+                        }
+                    },
+                    NetworkApiVersion = NetworkApiVersion._20201101
+                }
+            }
+        };
+
+    private static BulkVmConfiguration BuildVmOverride(string name, FlexCreateConfig config) =>
+        new()
+        {
+            Name = name,
+            ResourceGroupName = config.ResourceGroupName,
+            Properties = new BulkActionVirtualMachineProperties
+            {
+                HardwareProfile = new VirtualMachineHardwareProfile { VmSize = "Standard_D2ads_v5" },
+                OsProfile = new VirtualMachineOSProfile
+                {
+                    ComputerName = name,
+                    AdminUsername = config.VmAdminUsername,
+                    AdminPassword = config.VmAdminPassword,
+                    WindowsConfiguration = new WindowsConfiguration
+                    {
+                        ProvisionVmAgent = true,
+                        IsAutomaticUpdatesEnabled = true
+                    }
+                }
+            }
+        };
 
     /// <summary>
     /// Wraps the payload and execution params into the final

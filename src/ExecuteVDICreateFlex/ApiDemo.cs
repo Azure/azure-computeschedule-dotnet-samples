@@ -1,3 +1,4 @@
+using System.ClientModel.Primitives;
 using Azure;
 using Azure.Core;
 using Azure.Identity;
@@ -19,8 +20,6 @@ internal static class ExecuteVDICreateFlexApiDemo
         // ---- Inputs ----
         var subscriptionId = config.SubscriptionId;
         var location = config.Location;
-        var resourceGroupName = config.ResourceGroupName;
-
         TokenCredential credential = new DefaultAzureCredential();
         var armClient = new ArmClient(credential, subscriptionId);
         var subscription = armClient.GetSubscriptionResource(SubscriptionResource.CreateResourceIdentifier(subscriptionId));
@@ -30,110 +29,15 @@ internal static class ExecuteVDICreateFlexApiDemo
         var vnet = await HelperMethods.CreateVirtualNetwork(resourceGroup, config.SubnetName, config.VnetName, config.Location, vnetClient);
         var subnetId = HelperMethods.GetSubnetId(vnet).ToString();
  
-        // Build Flex properties (VM size priority order)
-        var flexProperties = new ComputeScheduleFlexProperties(
-            new[]
-            {
-                new ComputeScheduleVmSizeProfile(name: "Standard_D2ads_v5", rank: 0),
-                new ComputeScheduleVmSizeProfile(name: "Standard_E4as_v5", rank: 1),
-                // we can add more
-            },
-            ComputeScheduleOSType.Windows,
-            new ComputeSchedulePriorityProfile
-            {
-                Type = ComputeSchedulePriorityType.Regular,
-                AllocationStrategy = ComputeScheduleAllocationStrategy.Prioritized,
-            });
-
-        // Build flex payload
-        var payload = new ResourceProvisionFlexPayload(resourceCount: resourceCount, flexProperties)
-        {
-            ResourcePrefix = "demo-flex-"
-        };
-
-        payload.BaseProfile["resourceGroupName"] = BinaryData.FromString($"\"{resourceGroupName}\"");
-        payload.BaseProfile["computeApiVersion"] = BinaryData.FromString("\"2023-09-01\"");
-        payload.BaseProfile["location"] = BinaryData.FromString($"\"{location}\"");
-        payload.BaseProfile["properties"] = BinaryData.FromObjectAsJson(new
-        {
-            hardwareProfile = new { vmSize = "Standard_D2ads_v5" },
-            osProfile = new
-            {
-                computerName = "demovm01",
-                adminUsername = config.VmAdminUsername,
-                adminPassword = config.VmAdminPassword
-            },
-            storageProfile = new
-            {
-                imageReference = new
-                {
-                    publisher = "MicrosoftWindowsServer",
-                    offer = "WindowsServer",
-                    sku = "2022-datacenter-azure-edition",
-                    version = "latest"
-                },
-                osDisk = new
-                {
-                    osType = "Windows",
-                    createOption = "FromImage",
-                    caching = "ReadWrite",
-                    managedDisk = new { storageAccountType = "Standard_LRS" },
-                     // When VM gets deleted disk can be detached and used later.
-                     // You can also use "Delete" to automatically delete disks when VM gets deleted.
-                    deleteOption = "Detach",
-                    diskSizeGB = 127
-                },
-                diskControllerType = "SCSI"
-            },
-            networkProfile = new
-            {
-                networkInterfaceConfigurations = new[]
-                {
-                    new
-                    {
-                        name = "demonic",
-                        properties = new
-                        {
-                            primary = true,
-                            enableIPForwarding = true,
-                            ipConfigurations = new[]
-                            {
-                                new
-                                {
-                                    name = "demonic",
-                                    properties = new
-                                    {
-                                        subnet = new
-                                        {
-                                            id = subnetId,
-                                            properties = new
-                                            {
-                                                defaultOutboundAccess = false
-                                            }
-                                        },
-                                        primary = true,
-                                        applicationGatewayBackendAddressPools = Array.Empty<object>(),
-                                        loadBalancerBackendAddressPools = Array.Empty<object>()
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                networkApiVersion = "2022-07-01"
-            }
-        });
-
-        // Build request wrapper
-        var request = new ExecuteCreateFlexContent(payload, new ScheduledActionExecutionParameterDetail())
-        {
-            CorrelationId = Guid.NewGuid().ToString()
-        };
+        var payload = FlexRequestBuilder.BuildFlexPayload(config, subnetId, resourceCount, batchIndex: 0);
+        var request = FlexRequestBuilder.BuildRequest(payload, FlexRequestBuilder.BuildExecutionParams());
         Console.WriteLine($"CorrelationId: {request.CorrelationId}");
+        Console.WriteLine("Request body:");
+        Console.WriteLine(ModelReaderWriter.Write(request, ModelReaderWriterOptions.Json).ToString());
 
-        // Execute API
-        CreateFlexResourceOperationResult result =
+        ScheduledActionCreateFlexResult result =
             (await subscription.ExecuteVirtualMachineCreateFlexOperationAsync(location, request)).Value;
+
         Console.WriteLine($"ExecuteCreateFlex returned {result.Results.Count} operation result(s).");
 
         // Poll operation status via shared helper
