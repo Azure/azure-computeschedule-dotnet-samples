@@ -22,7 +22,12 @@ internal static class ArmClientFactory
     /// </summary>
     public static ArmClient CreateVNetClient(TokenCredential credential, string subscriptionId)
     {
-        var options = new ArmClientOptions();
+        var options = new ArmClientOptions
+        {
+            Environment = new ArmEnvironment(
+                new Uri($"https://eastus2euap.management.azure.com"),
+                "https://management.core.windows.net/")
+        };
         options.SetApiVersion(new ResourceType("Microsoft.Network/virtualNetworks"), "2025-03-01");
         return new ArmClient(credential, subscriptionId, options);
     }

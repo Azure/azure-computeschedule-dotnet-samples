@@ -41,11 +41,8 @@ internal static class FlexRequestBuilder
                 new ComputeScheduleVmSizeProfile(name: "Standard_D2ds_v5"),
             },
             ComputeScheduleOSType.Windows,
-            new ComputeSchedulePriorityProfile
-            {
-                Type = ComputeSchedulePriorityType.Regular,
-                AllocationStrategy = ComputeScheduleAllocationStrategy.LowestPrice,
-            });
+            new ComputeSchedulePriorityProfile()
+        );
 
     /// <summary>
     /// Builds the <see cref="ResourceProvisionFlexPayload"/> with the base profile

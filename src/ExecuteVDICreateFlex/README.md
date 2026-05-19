@@ -108,16 +108,56 @@ From the `src/ExecuteVDICreateFlex` directory:
 dotnet run -- --batch-demo --resource-count 200
 ```
 
+### Scenario examples
+
+Preview one of the CreateFlex scenario examples without submitting it:
+
+```powershell
+dotnet run --project .\src\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --scenario 12
+```
+
+Submit the selected scenario to ComputeSchedule:
+
+```powershell
+dotnet run --project .\src\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --scenario 12 --execute
+```
+
+Scenario definitions live in [Scenarios](./Scenarios/README.md).
+
+List all scenario configurations:
+
+```powershell
+dotnet run --project .\src\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --list-scenarios
+```
+
 ## Command-Line Options
 
 - `--api-demo`: runs the direct API demo
 - `--batch-demo`: runs the batch demo
 - `--batch-request-demo`: alias for `--batch-demo`
+- `--list-scenarios`: lists all CreateFlex scenario configurations
+- `--scenario <n>`: prints the request body for one of the CreateFlex scenario examples
+- `--execute`: submits a selected `--scenario` request after printing it
 - `--resource-count <n>`: overrides the default requested VM count
+- `--log-file <path>`: writes detailed Flex create diagnostics to the specified file
+- `--no-log-file`: disables per-run file logging
 
 Only one demo mode should be passed at a time.
 
 If no demo mode is provided, the sample prints the supported `dotnet run -- ...` usage examples and exits.
+
+## File Logging
+
+Flex create file logging is enabled by default. Each run writes a timestamped log under a `logs` folder in the current working directory and prints the log path at startup.
+
+The log captures setup details, correlation IDs, sanitized request payloads, submission results, polling summaries, batch progress, failed operations, and unhandled exceptions. Sensitive JSON fields such as `adminPassword`, `protectedSettings`, and `protectedSettingsFromKeyVault` are redacted in log payloads.
+
+Use a custom path or disable logging:
+
+```powershell
+dotnet run --project .\src\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --scenario 12 --log-file .\logs\scenario-12.log
+dotnet run --project .\src\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --scenario 12 --no-log-file
+```
 
 ## Expected Behavior
 

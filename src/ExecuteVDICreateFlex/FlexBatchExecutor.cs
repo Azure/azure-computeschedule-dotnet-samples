@@ -1,6 +1,7 @@
 using Azure;
 using Azure.ResourceManager.ComputeSchedule.Models;
 using Azure.ResourceManager.Resources;
+using System.ClientModel.Primitives;
 using System.Diagnostics;
 using UtilityMethods;
 
@@ -13,8 +14,10 @@ internal static class FlexBatchExecutor
         string subnetId,
         SubscriptionResource scheduleSubscriptionResource,
         HashSet<string> blockedOperationErrors,
-        int? totalRequestedVmCountOverride = null)
+        int? totalRequestedVmCountOverride = null,
+        FlexRunLogger? logger = null)
     {
+        logger ??= FlexRunLogger.Disabled;
         var totalRequestedVmCount = totalRequestedVmCountOverride ?? FlexRequestBuilder.TotalRequestedVmCount;
         var batchSizes = BuildBatchSizes(totalRequestedVmCount, FlexRequestBuilder.MaxResourceCountPerRequest);
 
@@ -32,6 +35,7 @@ internal static class FlexBatchExecutor
         var aggregateProgressLength = 0;
 
         Console.WriteLine($"Submitting {totalRequestedVmCount} VMs as {batchSizes.Count} batch request(s) with max {FlexRequestBuilder.MaxParallelBatches} parallel batches.");
+        logger.Info($"Submitting {totalRequestedVmCount} VMs as {batchSizes.Count} batch request(s) with max {FlexRequestBuilder.MaxParallelBatches} parallel batches.");
 
         using var concurrencyGate = new SemaphoreSlim(FlexRequestBuilder.MaxParallelBatches);
         var batchTasks = batchSizes.Select((batchSize, batchIndex) => Task.Run(async () =>
@@ -40,10 +44,15 @@ internal static class FlexBatchExecutor
             try
             {
                 Console.WriteLine($"Starting batch {batchIndex + 1}/{batchSizes.Count} (resourceCount={batchSize}).");
+                logger.Info($"Starting batch {batchIndex + 1}/{batchSizes.Count} (resourceCount={batchSize}).");
 
                 var executionParams = FlexRequestBuilder.BuildExecutionParams();
                 var payload = FlexRequestBuilder.BuildFlexPayload(config, subnetId, batchSize, batchIndex);
                 var request = FlexRequestBuilder.BuildRequest(payload, executionParams);
+                logger.Info($"Batch {batchIndex + 1}/{batchSizes.Count} correlationId={request.CorrelationId}.");
+                logger.SanitizedJson(
+                    $"Sanitized ExecuteCreateFlex request body for batch {batchIndex + 1}/{batchSizes.Count}:",
+                    ModelReaderWriter.Write(request, ModelReaderWriterOptions.Json).ToString());
 
                 Dictionary<string, ResourceOperationDetails> completedOperations = [];
                 var (_, summary) = await ComputescheduleOperations.ExecuteCreateFlexOperation(
@@ -71,6 +80,7 @@ internal static class FlexBatchExecutor
                             var aggregateProgressText =
                                 $"Batch-demo polling [{elapsed:mm\\:ss}] (polling every 15 seconds): {completed}/{totalRequestedVmCount} completed (known-valid: {knownValid}, succeeded: {succeeded}, failed: {failed}, cancelled: {cancelled}, in-progress: {inProgress}).";
                             RenderAggregateProgressLine(aggregateProgressText, ref aggregateProgressLength);
+                            logger.Info(aggregateProgressText);
                         }
                     });
 
@@ -84,6 +94,7 @@ internal static class FlexBatchExecutor
                 Interlocked.Add(ref totalSucceeded, summary.SucceededCount);
                 Interlocked.Add(ref totalFailed, summary.FailedCount);
                 Interlocked.Add(ref totalCancelled, summary.CancelledCount);
+                logger.Info($"Batch {batchIndex + 1}/{batchSizes.Count} completed: valid={summary.ValidCount}, completed={summary.CompletedCount}, succeeded={summary.SucceededCount}, failed={summary.FailedCount}, cancelled={summary.CancelledCount}.");
             }
             catch (RequestFailedException ex)
             {
@@ -99,6 +110,7 @@ internal static class FlexBatchExecutor
                 }
 
                 Console.WriteLine($"Batch {batchIndex + 1}/{batchSizes.Count} request failed with ErrorCode:{ex.ErrorCode} and ErrorMessage:{ex.Message}");
+                logger.Exception(ex, $"Batch {batchIndex + 1}/{batchSizes.Count} request failed with ErrorCode:{ex.ErrorCode}");
             }
             catch (Exception ex)
             {
@@ -114,6 +126,7 @@ internal static class FlexBatchExecutor
                 }
 
                 Console.WriteLine($"Batch {batchIndex + 1}/{batchSizes.Count} failed with Exception:{ex.Message}");
+                logger.Exception(ex, $"Batch {batchIndex + 1}/{batchSizes.Count} failed");
             }
             finally
             {
@@ -131,19 +144,23 @@ internal static class FlexBatchExecutor
             totalFailed,
             totalCancelled,
             batchRequestFailures);
+        logger.Info($"Combined final status: requested={totalRequestedVmCount}, valid={totalValid}, completed={totalCompleted}, succeeded={totalSucceeded}, failed={totalFailed}, cancelled={totalCancelled}, batchRequestFailures={batchRequestFailures}.");
 
         if (failedOperations.Count > 0)
         {
             Console.WriteLine("Failed VM operations across all batches:");
+            logger.Warning("Failed VM operations across all batches:");
             foreach (var failedOperation in failedOperations)
             {
-                Console.WriteLine(
-                    $"- resourceId={failedOperation.ResourceId}, state={failedOperation.State}, errorCode={failedOperation.ErrorCode}, errorDetails={failedOperation.ErrorDetails}");
+                var message = $"- resourceId={failedOperation.ResourceId}, state={failedOperation.State}, errorCode={failedOperation.ErrorCode}, errorDetails={failedOperation.ErrorDetails}";
+                Console.WriteLine(message);
+                logger.Warning(message);
             }
         }
         else
         {
             Console.WriteLine("All batch requests completed without VM operation failures.");
+            logger.Info("All batch requests completed without VM operation failures.");
         }
     }
 

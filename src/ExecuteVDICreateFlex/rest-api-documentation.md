@@ -7,7 +7,7 @@ This guide explains how to configure a Flex create request for Scheduled Actions
 Use the following endpoint format to construct the request URL for the Flex create operation:
 
 ```text
-https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.ComputeSchedule/locations/{location}/virtualMachinesExecuteCreateFlex?api-version=2026-03-01-preview
+https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.ComputeSchedule/locations/{location}/virtualMachinesExecuteCreateFlex?api-version=2026-04-15-preview
 ```
 
 
@@ -18,12 +18,12 @@ https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.
 | Provider        | `Microsoft.ComputeSchedule`        |
 | Location        | `{location}`                       |
 | Operation       | `virtualMachinesExecuteCreateFlex` |
-| API Version     | `2026-03-01-preview`               |
+| API Version     | `2026-04-15-preview`               |
 
 Example:
 
 ```text
-https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.ComputeSchedule/locations/eastus2euap/virtualMachinesExecuteCreateFlex?api-version=2026-03-01-preview
+https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.ComputeSchedule/locations/eastus2euap/virtualMachinesExecuteCreateFlex?api-version=2026-04-15-preview
 ```
 
 The location in the request URL must match the `baseProfile.location` value in the request body. Use the endpoint and `api-version` exactly as shown in the current preview example unless your environment has a newer published version available.
