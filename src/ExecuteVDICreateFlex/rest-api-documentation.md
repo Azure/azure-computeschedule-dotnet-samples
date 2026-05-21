@@ -64,16 +64,15 @@ Within `resourceConfigParameters`, clients define a reusable base VM profile, a 
 
 | Field                                         | Type    | Required | Supported values shown in examples                           | Description                                                                    |
 | ----------------------------------------------- | --------- | ---------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `capacityType`                                | string  | Yes      | `VM`                                                         | Capacity mode for the request.                                                 |
 | `vmSizeProfiles`                              | array   | Yes      | One or more VM size entries                                  | Ordered list of preferred VM SKUs.                                             |
 | `vmSizeProfiles[].name`                       | string  | Yes      | `Standard_D2ads_v5`, `Standard_E2ads_v5`, `Standard_D2ds_v5` | VM SKU name to consider.   max 10.                                             |
-| `vmSizeProfiles[].rank`                       | integer | No       | `0`, `1`, `2`                                                | Allowed only when `priorityProfile.allocationStrategy` is `Prioritized`.        |
+| `vmSizeProfiles[].rank`                       | integer | No       | `0`, `1`, `2`                                                | Required when `priorityProfile.allocationStrategy` is `Prioritized`.        |
 | `osType`                                      | string  | Yes      | `Windows`, `Linux`                                           | OS type aligned with the base profile image and OS settings.                   |
-| `priorityProfile.type`                        | string  | Yes      | `Regular`                                                    | Capacity purchase model.                                                       |
-| `priorityProfile.allocationStrategy`          | string  | Yes      | `Regular`: `Prioritized`, `LowestPrice`                      | Allowed values depend on`priorityProfile.type`.                                |
+| `priorityProfile.type`                        | string  | No      | `Regular`, `Spot`                                                    | Capacity purchase model.                                                       |
+| `priorityProfile.allocationStrategy`          | string  | Yes      | `Regular`: `Prioritized`, `LowestPrice` ; `Spot`: `CapacityOptimized`                     | Allowed values depend on`priorityProfile.type`.                                |
 | `zoneAllocationPolicy.distributionStrategy`   | string  | No       | `Prioritized`, `BestEffortSingleZone`                        | If `zoneAllocationPolicy` is provided, top-level `zones` must also be provided. |
 | `zoneAllocationPolicy.zonePreferences[].zone` | string  | No       | `1`, `2`, `3`                                                | Each zone must also appear in the top-level`zones` list.                       |
-| `zoneAllocationPolicy.zonePreferences[].rank` | integer | No       | `0`, `1`, `2`, `3`                                           | Required for every `zonePreferences` entry when `zonePreferences` is supplied.  |
+| `zoneAllocationPolicy.zonePreferences[].rank` | integer | No       | `0`, `1`, `2`, `3`                                           | Required when `zoneAllocationPolicy.distributionStrategy` is `Prioritized` |
 
 ### Supported values shown in current examples
 
