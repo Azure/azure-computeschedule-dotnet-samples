@@ -25,7 +25,7 @@ internal static class ArmClientFactory
         var options = new ArmClientOptions
         {
             Environment = new ArmEnvironment(
-                new Uri($"https://eastus2euap.management.azure.com"),
+                new Uri($"https://management.azure.com"),
                 "https://management.core.windows.net/")
         };
         options.SetApiVersion(new ResourceType("Microsoft.Network/virtualNetworks"), "2025-03-01");
