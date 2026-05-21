@@ -7,7 +7,7 @@ This guide explains how to configure a Flex create request for Scheduled Actions
 Use the following endpoint format to construct the request URL for the Flex create operation:
 
 ```text
-https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.ComputeSchedule/locations/{location}/virtualMachinesExecuteCreateFlex?api-version=2026-03-01-preview
+https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.ComputeSchedule/locations/{location}/virtualMachinesExecuteCreateFlex?api-version=2026-04-15-preview
 ```
 
 
@@ -18,15 +18,13 @@ https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.
 | Provider        | `Microsoft.ComputeSchedule`        |
 | Location        | `{location}`                       |
 | Operation       | `virtualMachinesExecuteCreateFlex` |
-| API Version     | `2026-03-01-preview`               |
+| API Version     | `2026-04-15-preview`               |
 
 Example:
 
 ```text
-https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.ComputeSchedule/locations/eastus2euap/virtualMachinesExecuteCreateFlex?api-version=2026-03-01-preview
+https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.ComputeSchedule/locations/eastus2euap/virtualMachinesExecuteCreateFlex?api-version=2026-04-15-preview
 ```
-
-The location in the request URL must match the `baseProfile.location` value in the request body. Use the endpoint and `api-version` exactly as shown in the current preview example unless your environment has a newer published version available.
 
 ## Overview
 
@@ -47,10 +45,10 @@ Within `resourceConfigParameters`, clients define a reusable base VM profile, a 
 
 | Field               | Type    | Required | Description                                                                      | Notes                                                                                                           |
 | --------------------- | --------- | ---------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `baseProfile`       | object  | Yes      | Defines the shared VM template used as the starting point for created resources. | Includes location, resource group, identity, compute, storage, OS, and network settings.                        |
+| `baseProfile`       | object  | Yes      | Defines the shared VM template used as the starting point for created resources. | Includes resource group, identity, compute, storage, OS, and network settings.                                 |
 | `resourceOverrides` | array   | Yes      | Per-resource override objects applied on top of `baseProfile`.                    | Scheduled Actions usage populates one object per resource, with observed fields including `name` and `location`. |
 | `resourceCount`     | integer | Yes      | Number of resources to create.                                                   | Examples use a placeholder such as `{{resourceCount}}`.                                                          |
-| `resourcePrefix`    | string  | Yes      | Prefix used to name created resources.                                           | Examples append a scenario suffix such as `-1`, `-2`, or `-14`.                                                  |
+| `resourcePrefix`    | string  | Yes      | Prefix used to name created resources.                                           | Examples append a numeric suffix such as `-1`, `-2`, or `-14`.                                                   |
 | `flexProperties`    | object  | Yes      | Defines Flex-specific placement and priority behavior.                           | This is the primary block for SKU, zone, and Spot selection.                                                    |
 
 ## Base Profile
@@ -64,16 +62,15 @@ Within `resourceConfigParameters`, clients define a reusable base VM profile, a 
 
 | Field                                         | Type    | Required | Supported values shown in examples                           | Description                                                                    |
 | ----------------------------------------------- | --------- | ---------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `capacityType`                                | string  | Yes      | `VM`                                                         | Capacity mode for the request.                                                 |
 | `vmSizeProfiles`                              | array   | Yes      | One or more VM size entries                                  | Ordered list of preferred VM SKUs.                                             |
 | `vmSizeProfiles[].name`                       | string  | Yes      | `Standard_D2ads_v5`, `Standard_E2ads_v5`, `Standard_D2ds_v5` | VM SKU name to consider.   max 10.                                             |
-| `vmSizeProfiles[].rank`                       | integer | No       | `0`, `1`, `2`                                                | Allowed only when `priorityProfile.allocationStrategy` is `Prioritized`.        |
+| `vmSizeProfiles[].rank`                       | integer | No       | `0`, `1`, `2`                                                | Required when `priorityProfile.allocationStrategy` is `Prioritized`.        |
 | `osType`                                      | string  | Yes      | `Windows`, `Linux`                                           | OS type aligned with the base profile image and OS settings.                   |
-| `priorityProfile.type`                        | string  | Yes      | `Regular`                                                    | Capacity purchase model.                                                       |
-| `priorityProfile.allocationStrategy`          | string  | Yes      | `Regular`: `Prioritized`, `LowestPrice`                      | Allowed values depend on`priorityProfile.type`.                                |
+| `priorityProfile.type`                        | string  | No      | `Regular`, `Spot`                                                    | Capacity purchase model.                                                       |
+| `priorityProfile.allocationStrategy`          | string  | Yes      | `Regular`: `Prioritized`, `LowestPrice` ; `Spot`: `LowestPrice`, `CapacityOptimized`                     | Allowed values depend on`priorityProfile.type`.                                |
 | `zoneAllocationPolicy.distributionStrategy`   | string  | No       | `Prioritized`, `BestEffortSingleZone`                        | If `zoneAllocationPolicy` is provided, top-level `zones` must also be provided. |
 | `zoneAllocationPolicy.zonePreferences[].zone` | string  | No       | `1`, `2`, `3`                                                | Each zone must also appear in the top-level`zones` list.                       |
-| `zoneAllocationPolicy.zonePreferences[].rank` | integer | No       | `0`, `1`, `2`, `3`                                           | Required for every `zonePreferences` entry when `zonePreferences` is supplied.  |
+| `zoneAllocationPolicy.zonePreferences[].rank` | integer | No       | `0`, `1`, `2`, `3`                                           | Required when `zoneAllocationPolicy.distributionStrategy` is `Prioritized` |
 
 ### Supported values shown in current examples
 
@@ -89,12 +86,11 @@ The examples supplied for this guide show the following value space. The validat
 
 Validator-enforced rules from the operation-layer input validator:
 
-1. `priorityProfile.type` is required.
-2. `priorityProfile.allocationStrategy` is constrained by priority type: `Regular` allows `LowestPrice` and `Prioritized`.
-3. `vmSizeProfiles[].rank` can only be specified when allocation strategy is `Prioritized`.
-4. If `zoneAllocationPolicy` is provided, top-level `zones` must also be provided.
-5. If `distributionStrategy` is `Prioritized`, `zonePreferences` must be provided.
-6. Each `zonePreferences[].zone` must also be present in the top-level `zones` list.
+1. `priorityProfile.allocationStrategy` is constrained by priority type: `Regular` allows `LowestPrice` and `Prioritized`, `Spot` allows `LowestPrice` and `CapacityOptimized`.
+2. `vmSizeProfiles[].rank` Must be specified when allocation strategy is `Prioritized`.
+3. If `zoneAllocationPolicy` is provided, top-level `zones` must also be provided.
+4. If `distributionStrategy` is `Prioritized`, `zonePreferences` must be provided.
+5. Each `zonePreferences[].zone` must also be present in the top-level `zones` list.
 
 ## Execution Parameters
 
@@ -111,7 +107,7 @@ All supplied examples use the same `executionParameters` shape.
 ## How Configuration Choices Work
 
 1. Choose whether the request is regional or zonal. Regional examples omit `baseProfile.zones`. Zonal examples include one or more explicit zones.
-2. Choose one or more VM SKUs in `vmSizeProfiles`. Single-SKU scenarios use one entry, while multi-SKU scenarios include two or three entries.
+2. Choose one or more VM SKUs in `vmSizeProfiles`. Single-SKU examples use one entry, while multi-SKU examples include two or three entries.
 3. Decide whether to include ranks. The validator only allows `vmSizeProfiles[].rank` when `priorityProfile.allocationStrategy` is `Prioritized`.
 4. Choose `Regular` in `priorityProfile.type`.
 5. Choose an allocation strategy compatible with the priority type. `Regular` supports `Prioritized` and `LowestPrice`. `Spot` supports `LowestPrice` and `CapacityOptimized`.
@@ -128,7 +124,6 @@ This section includes a representative set of payloads that cover the main patte
 {
   "resourceConfigParameters": {
     "baseProfile": {
-      "location": "{{location}}",
       "ResourceGroupName": "{{resourceGroupName}}",
       "ComputeAPIVersion": "2025-04-01",
       "tags": {
@@ -175,7 +170,6 @@ This section includes a representative set of payloads that cover the main patte
     "resourceCount": {{resourceCount}},
     "resourcePrefix": "vdi",
     "flexProperties": {
-      "capacityType": "VM",
       "vmSizeProfiles": [
         { "name": "Standard_D2ads_v5", "rank": 0 },
         { "name": "Standard_E2ads_v5", "rank": 1 },
@@ -203,7 +197,6 @@ This section includes a representative set of payloads that cover the main patte
 {
   "resourceConfigParameters": {
     "baseProfile": {
-      "location": "{{location}}",
       "ResourceGroupName": "{{resourceGroupName}}",
       "ComputeAPIVersion": "2025-04-01",
       "tags": {
@@ -253,7 +246,6 @@ This section includes a representative set of payloads that cover the main patte
     "resourceCount": {{resourceCount}},
     "resourcePrefix": "vdi",
     "flexProperties": {
-      "capacityType": "VM",
       "vmSizeProfiles": [
         { "name": "Standard_D2ads_v5" },
         { "name": "Standard_E2ads_v5" },
@@ -361,7 +353,7 @@ The following sample is anonymized. Replace placeholder values with your own sub
 | Question                                     | Guidance                                                                                                              |
 | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | When should I include `zones`?                | Include `baseProfile.zones` when you want a zonal request. Regional examples omit it entirely.                         |
-| When should I include `zoneAllocationPolicy`? | Include it when zone distribution or zone ordering matters. Current examples only show this block in zonal scenarios. |
+| When should I include `zoneAllocationPolicy`? | Include it when zone distribution or zone ordering matters. Current examples only show this block in zonal requests. |
 | When is `vmSizeProfiles[].rank` useful?       | Ranked entries appear in prioritized examples and help express preference order across multiple SKUs.                 |
 | How do Windows and Linux requests differ?    | Update `imageReference`, `osProfile`, `osDisk.diskSizeGB`, and `flexProperties.osType` together.                       |
 

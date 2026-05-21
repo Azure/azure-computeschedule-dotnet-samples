@@ -7,11 +7,6 @@ internal static class FinalStatusConsoleWriter
         Write(message, GetApiStatusColor(validCount, completedCount, failedCount, cancelledCount));
     }
 
-    public static void WriteBatchStatus(string message, int requestedCount, int completedCount, int failedCount, int cancelledCount, int batchRequestFailures)
-    {
-        Write(message, GetBatchStatusColor(requestedCount, completedCount, failedCount, cancelledCount, batchRequestFailures));
-    }
-
     private static void Write(string message, ConsoleColor color)
     {
         if (Console.IsOutputRedirected)
@@ -34,21 +29,6 @@ internal static class FinalStatusConsoleWriter
         }
 
         if (cancelledCount > 0 || completedCount < validCount)
-        {
-            return ConsoleColor.Yellow;
-        }
-
-        return ConsoleColor.Green;
-    }
-
-    private static ConsoleColor GetBatchStatusColor(int requestedCount, int completedCount, int failedCount, int cancelledCount, int batchRequestFailures)
-    {
-        if (failedCount > 0 || batchRequestFailures > 0)
-        {
-            return ConsoleColor.Red;
-        }
-
-        if (cancelledCount > 0 || completedCount < requestedCount)
         {
             return ConsoleColor.Yellow;
         }

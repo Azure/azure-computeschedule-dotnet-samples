@@ -9,7 +9,7 @@ The samples are intentionally small and focused. Each project folder represents 
 | Project | What it demonstrates |
 |---|---|
 | `ExecuteCreate` | Standard VM create flow with network and disk setup |
-| `ExecuteVDICreateFlex` | VDI Flex create flow with API and batch demo modes |
+| `ExecuteVDICreateFlex` | VDI Flex create API sample flow |
 | `ExecuteStart` | Start existing VMs |
 | `ExecuteDeallocate` | Deallocate existing VMs |
 | `ExecuteDelete` | Delete existing VMs |
@@ -111,7 +111,6 @@ Some projects support additional command-line arguments. For example, `ExecuteVD
 
 ```bash
 dotnet run -- --api-demo --resource-count 5
-dotnet run -- --batch-demo --resource-count 200
 ```
 
 ## Sample Notes
