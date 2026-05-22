@@ -14,11 +14,21 @@ internal static class ExecuteVDICreateFlexApiDemo
 {
     public static async Task RunAsync(int? resourceCountOverride = null, FlexRunLogger? logger = null)
     {
+        await RunAsync("API sample", FlexRequestBuilder.BuildRequest, resourceCountOverride, logger);
+    }
+
+    internal static async Task RunAsync(
+        string sampleName,
+        Func<FlexCreateConfig, string, int, ExecuteCreateFlexContent> requestBuilder,
+        int? resourceCountOverride = null,
+        FlexRunLogger? logger = null)
+    {
         logger ??= FlexRunLogger.Disabled;
+        logger.Info($"Running {sampleName}.");
         var sampleContext = LoadSampleContext(resourceCountOverride, logger);
         var (subscriptionResource, resourceGroupResource) = await CreateAzureResourcesAsync(sampleContext);
         var subnetId = await PrepareSubnetAsync(sampleContext, resourceGroupResource, logger);
-        var createFlexRequest = BuildCreateFlexRequest(sampleContext, subnetId, logger);
+        var createFlexRequest = BuildCreateFlexRequest(sampleContext, subnetId, requestBuilder, logger);
 
         var createFlexResult = await SubmitCreateFlexRequestAsync(sampleContext, subscriptionResource, createFlexRequest, logger);
         await PollAndReportAsync(sampleContext, subscriptionResource, createFlexResult, logger);
@@ -70,9 +80,13 @@ internal static class ExecuteVDICreateFlexApiDemo
         return subnetId;
     }
 
-    private static ExecuteCreateFlexContent BuildCreateFlexRequest(ApiSampleContext context, string subnetId, FlexRunLogger logger)
+    private static ExecuteCreateFlexContent BuildCreateFlexRequest(
+        ApiSampleContext context,
+        string subnetId,
+        Func<FlexCreateConfig, string, int, ExecuteCreateFlexContent> requestBuilder,
+        FlexRunLogger logger)
     {
-        var createFlexRequest = FlexRequestBuilder.BuildRequest(
+        var createFlexRequest = requestBuilder(
             context.Config,
             subnetId,
             context.ResourceCount);

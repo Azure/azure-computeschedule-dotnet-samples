@@ -68,8 +68,8 @@ Within `resourceConfigParameters`, clients define a reusable base VM profile, a 
 | `osType`                                      | string  | Yes      | `Windows`, `Linux`                                           | OS type aligned with the base profile image and OS settings.                   |
 | `priorityProfile.type`                        | string  | No      | `Regular`, `Spot`                                                    | Capacity purchase model.                                                       |
 | `priorityProfile.allocationStrategy`          | string  | Yes      | `Regular`: `Prioritized`, `LowestPrice` ; `Spot`: `LowestPrice`, `CapacityOptimized`                     | Allowed values depend on`priorityProfile.type`.                                |
-| `zoneAllocationPolicy.distributionStrategy`   | string  | No       | `Prioritized`, `BestEffortSingleZone`                        | If `zoneAllocationPolicy` is provided, top-level `zones` must also be provided. |
-| `zoneAllocationPolicy.zonePreferences[].zone` | string  | No       | `1`, `2`, `3`                                                | Each zone must also appear in the top-level`zones` list.                       |
+| `zoneAllocationPolicy.distributionStrategy`   | string  | No       | `Prioritized`, `BestEffortSingleZone`                        | If `zoneAllocationPolicy` is provided, `baseProfile.zones` must also be provided. |
+| `zoneAllocationPolicy.zonePreferences[].zone` | string  | No       | `1`, `2`, `3`                                                | Each zone must also appear in the `baseProfile.zones` list.                    |
 | `zoneAllocationPolicy.zonePreferences[].rank` | integer | No       | `0`, `1`, `2`, `3`                                           | Required when `zoneAllocationPolicy.distributionStrategy` is `Prioritized` |
 
 ### Supported values shown in current examples
@@ -88,9 +88,9 @@ Validator-enforced rules from the operation-layer input validator:
 
 1. `priorityProfile.allocationStrategy` is constrained by priority type: `Regular` allows `LowestPrice` and `Prioritized`, `Spot` allows `LowestPrice` and `CapacityOptimized`.
 2. `vmSizeProfiles[].rank` Must be specified when allocation strategy is `Prioritized`.
-3. If `zoneAllocationPolicy` is provided, top-level `zones` must also be provided.
+3. If `zoneAllocationPolicy` is provided, `baseProfile.zones` must also be provided.
 4. If `distributionStrategy` is `Prioritized`, `zonePreferences` must be provided.
-5. Each `zonePreferences[].zone` must also be present in the top-level `zones` list.
+5. Each `zonePreferences[].zone` must also be present in the `baseProfile.zones` list.
 
 ## Execution Parameters
 
@@ -111,8 +111,8 @@ All supplied examples use the same `executionParameters` shape.
 3. Decide whether to include ranks. The validator only allows `vmSizeProfiles[].rank` when `priorityProfile.allocationStrategy` is `Prioritized`.
 4. Choose `Regular` in `priorityProfile.type`.
 5. Choose an allocation strategy compatible with the priority type. `Regular` supports `Prioritized` and `LowestPrice`. `Spot` supports `LowestPrice` and `CapacityOptimized`.
-6. If zones matter, add top-level `zones`. If you also add `zoneAllocationPolicy`, the validator requires `zones` to be present.
-7. If `zoneAllocationPolicy.distributionStrategy` is `Prioritized`, provide `zonePreferences`, and ensure each preference zone is also present in the top-level `zones` list.
+6. If zones matter, add `baseProfile.zones`. If you also add `zoneAllocationPolicy`, the validator requires `baseProfile.zones` to be present.
+7. If `zoneAllocationPolicy.distributionStrategy` is `Prioritized`, provide `zonePreferences`, and ensure each preference zone is also present in the `baseProfile.zones` list.
 
 ## Representative Examples
 
@@ -267,6 +267,92 @@ This section includes a representative set of payloads that cover the main patte
 }
 ```
 
+### Example: regular, zonal, lowest price, Windows, three SKUs
+
+```json
+{
+  "resourceConfigParameters": {
+    "baseProfile": {
+      "ResourceGroupName": "{{resourceGroupName}}",
+      "ComputeAPIVersion": "2025-04-01",
+      "zones": [
+        "1",
+        "2",
+        "3"
+      ],
+      "tags": {
+        "<key>": "<value>"
+      },
+      "identity": { "type": "SystemAssigned" },
+      "properties": {
+        "hardwareProfile": { "vmSize": "Standard_D2ads_v5" },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2022-Datacenter",
+            "version": "latest"
+          },
+          "osDisk": {
+            "createOption": "FromImage",
+            "managedDisk": {},
+            "diskSizeGB": 127
+          }
+        },
+        "osProfile": {
+          "computerName": "saflexvm",
+          "adminUsername": "testadmin",
+          "adminPassword": "{{password}}",
+          "windowsConfiguration": {}
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "/subscriptions/{{subscriptionId}}/resourceGroups/{{resourceGroupName}}/providers/Microsoft.Network/networkInterfaces/{{nicName}}",
+              "properties": { "primary": true }
+            }
+          ]
+        }
+      }
+    },
+    "resourceOverrides": [
+      {
+        "name": "vdi-vm-0",
+        "location": "{{location}}"
+      }
+    ],
+    "resourceCount": {{resourceCount}},
+    "resourcePrefix": "vdi",
+    "flexProperties": {
+      "vmSizeProfiles": [
+        { "name": "Standard_D2ads_v5" },
+        { "name": "Standard_E2ads_v5" },
+        { "name": "Standard_D2ds_v5" }
+      ],
+      "osType": "Windows",
+      "priorityProfile": {
+        "type": "Regular",
+        "allocationStrategy": "LowestPrice"
+      },
+      "zoneAllocationPolicy": {
+        "distributionStrategy": "Prioritized",
+        "zonePreferences": [
+          { "zone": "1", "rank": 0 },
+          { "zone": "2", "rank": 1 },
+          { "zone": "3", "rank": 2 }
+        ]
+      }
+    }
+  },
+  "executionParameters": {
+    "retryPolicy": {
+      "retryCount": 1,
+      "retryWindowInMinutes": 60
+    }
+  }
+}
+```
+
 ## Response Shape
 
 The sync path response returns an immediate scheduling result, not a final VM provisioning result. A successful sync response means the service accepted the request and created one or more operation records that should be tracked to terminal state.
@@ -374,7 +460,7 @@ Yes, unless `priorityProfile.allocationStrategy` is `Prioritized`. The validator
 
 **Q: Do I need `zoneAllocationPolicy` whenever I specify zones?**
 
-No. But if you do specify `zoneAllocationPolicy`, the validator requires top-level `zones` to be present. If the distribution strategy is `Prioritized`, `zonePreferences` are also required.
+No. But if you do specify `zoneAllocationPolicy`, the validator requires `baseProfile.zones` to be present. If the distribution strategy is `Prioritized`, `zonePreferences` are also required.
 
 **Q: What fields change between regional and zonal requests?**
 

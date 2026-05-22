@@ -14,7 +14,7 @@ Use this README for setup and execution steps. REST payload and response details
 - Creates or reuses network prerequisites needed for the request
 - Submits a Flex create request to Scheduled Actions
 - Polls operation status until the requested resources reach terminal states
-- Runs the API sample flow from request creation through final status polling
+- Runs the API sample flow from request creation through final status polling, including an optional zonal variant
 
 ## Prerequisites
 
@@ -72,23 +72,27 @@ From the repository root:
 
 ```powershell
 dotnet run --project .\src\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --api-demo --resource-count 5
+dotnet run --project .\src\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --api-demo-with-zones --resource-count 5
 ```
 
 From the `src` directory:
 
 ```powershell
 dotnet run --project .\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --api-demo --resource-count 5
+dotnet run --project .\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --api-demo-with-zones --resource-count 5
 ```
 
 From the `src/ExecuteVDICreateFlex` directory:
 
 ```powershell
 dotnet run -- --api-demo --resource-count 5
+dotnet run -- --api-demo-with-zones --resource-count 5
 ```
 
 ## Command-Line Options
 
 - `--api-demo`: runs the direct API demo
+- `--api-demo-with-zones`: runs the direct API demo with zones `1`, `2`, and `3` plus a prioritized zone allocation policy
 - `--resource-count <n>`: overrides the default requested VM count
 - `--log-file <path>`: writes detailed Flex create diagnostics to the specified file
 - `--no-log-file`: disables per-run file logging
@@ -127,3 +131,4 @@ dotnet run --project .\src\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- -
 - [rest-api-documentation.md](./rest-api-documentation.md): request and response documentation for the Flex create REST API
 - `Program.cs`: entry point and CLI argument handling
 - `ApiDemo.cs`: direct API demo flow
+- `ApiDemoWithZones.cs`: zonal API demo flow

@@ -24,10 +24,19 @@ public static class Program
 
         try
         {
-            if (!options.RunApiSample)
+            ValidateSampleMode(options);
+            if (!options.HasSampleMode)
             {
                 PrintUsage();
                 logger.Warning("No sample mode selected.");
+                return;
+            }
+
+            if (options.RunApiSampleWithZones)
+            {
+                Console.WriteLine("Running API sample with zones.");
+                logger.Info("Running API sample with zones.");
+                await ApiDemoWithZones.RunAsync(options.ResourceCountOverride, logger);
                 return;
             }
 
@@ -43,24 +52,38 @@ public static class Program
     }
     private sealed record SampleOptions(
         bool RunApiSample,
+        bool RunApiSampleWithZones,
         int? ResourceCountOverride,
         string? LogFilePath,
-        bool DisableLogFile);
+        bool DisableLogFile)
+    {
+        public bool HasSampleMode => RunApiSample || RunApiSampleWithZones;
+    }
 
     private static SampleOptions ParseOptions(string[] args) =>
         new(
             RunApiSample: args.Contains("--api-demo", StringComparer.OrdinalIgnoreCase),
+            RunApiSampleWithZones: args.Contains("--api-demo-with-zones", StringComparer.OrdinalIgnoreCase),
             ResourceCountOverride: TryParseResourceCount(args),
             LogFilePath: TryParseStringOption(args, "--log-file"),
             DisableLogFile: args.Contains("--no-log-file", StringComparer.OrdinalIgnoreCase));
 
     private static void PrintUsage()
     {
-        Console.WriteLine("Please choose the API sample mode: --api-demo.");
+        Console.WriteLine("Please choose one API sample mode: --api-demo or --api-demo-with-zones.");
         Console.WriteLine("Examples:");
         Console.WriteLine("  dotnet run -- --api-demo --resource-count 5");
+        Console.WriteLine("  dotnet run -- --api-demo-with-zones --resource-count 5");
         Console.WriteLine("  dotnet run -- --api-demo --log-file .\\logs\\api-demo.log");
         Console.WriteLine("  dotnet run -- --api-demo --no-log-file");
+    }
+
+    private static void ValidateSampleMode(SampleOptions options)
+    {
+        if (options.RunApiSample && options.RunApiSampleWithZones)
+        {
+            throw new ArgumentException("Choose only one sample mode: --api-demo or --api-demo-with-zones.");
+        }
     }
 
     private static int? TryParseResourceCount(string[] args)
