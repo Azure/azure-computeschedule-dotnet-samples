@@ -14,7 +14,7 @@ Use this README for setup and execution steps. REST payload and response details
 - Creates or reuses network prerequisites needed for the request
 - Submits a Flex create request to Scheduled Actions
 - Polls operation status until the requested resources reach terminal states
-- Supports two demo modes: API demo and batch demo
+- Runs the API sample flow from request creation through final status polling, including an optional zonal variant
 
 ## Prerequisites
 
@@ -68,56 +68,49 @@ dotnet build .\ExecuteVDICreateFlex.csproj
 
 ## Run
 
-### API demo
-
 From the repository root:
 
 ```powershell
 dotnet run --project .\src\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --api-demo --resource-count 5
+dotnet run --project .\src\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --api-demo-with-zones --resource-count 5
 ```
 
 From the `src` directory:
 
 ```powershell
 dotnet run --project .\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --api-demo --resource-count 5
+dotnet run --project .\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --api-demo-with-zones --resource-count 5
 ```
 
 From the `src/ExecuteVDICreateFlex` directory:
 
 ```powershell
 dotnet run -- --api-demo --resource-count 5
-```
-
-### Batch demo
-
-From the repository root:
-
-```powershell
-dotnet run --project .\src\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --batch-demo --resource-count 200
-```
-
-From the `src` directory:
-
-```powershell
-dotnet run --project .\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --batch-demo --resource-count 200
-```
-
-From the `src/ExecuteVDICreateFlex` directory:
-
-```powershell
-dotnet run -- --batch-demo --resource-count 200
+dotnet run -- --api-demo-with-zones --resource-count 5
 ```
 
 ## Command-Line Options
 
 - `--api-demo`: runs the direct API demo
-- `--batch-demo`: runs the batch demo
-- `--batch-request-demo`: alias for `--batch-demo`
+- `--api-demo-with-zones`: runs the direct API demo with zones `1`, `2`, and `3` plus a prioritized zone allocation policy
 - `--resource-count <n>`: overrides the default requested VM count
-
-Only one demo mode should be passed at a time.
+- `--log-file <path>`: writes detailed Flex create diagnostics to the specified file
+- `--no-log-file`: disables per-run file logging
 
 If no demo mode is provided, the sample prints the supported `dotnet run -- ...` usage examples and exits.
+
+## File Logging
+
+Flex create file logging is enabled by default. Each run writes a timestamped log under a `logs` folder in the current working directory and prints the log path at startup.
+
+The log captures setup details, correlation IDs, sanitized request payloads, submission results, polling summaries, failed operations, and unhandled exceptions. Sensitive JSON fields such as `adminPassword`, `protectedSettings`, and `protectedSettingsFromKeyVault` are redacted in log payloads.
+
+Use a custom path or disable logging:
+
+```powershell
+dotnet run --project .\src\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --api-demo --log-file .\logs\api-demo.log
+dotnet run --project .\src\ExecuteVDICreateFlex\ExecuteVDICreateFlex.csproj -- --api-demo --no-log-file
+```
 
 ## Expected Behavior
 
@@ -138,4 +131,4 @@ If no demo mode is provided, the sample prints the supported `dotnet run -- ...`
 - [rest-api-documentation.md](./rest-api-documentation.md): request and response documentation for the Flex create REST API
 - `Program.cs`: entry point and CLI argument handling
 - `ApiDemo.cs`: direct API demo flow
-- `BatchDemo.cs`: batch demo flow
+- `ApiDemoWithZones.cs`: zonal API demo flow

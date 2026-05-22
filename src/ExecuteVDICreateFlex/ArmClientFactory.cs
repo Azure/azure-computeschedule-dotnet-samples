@@ -17,14 +17,12 @@ internal static class ArmClientFactory
         new(credential);
 
     /// <summary>
-    /// Creates an ARM client with the Microsoft.Network API version pinned to
-    /// <c>2025-03-01</c>, required for reliable VNet creation.
+    /// Creates a standard ARM client scoped to the specified subscription for
+    /// virtual network operations.
     /// </summary>
     public static ArmClient CreateVNetClient(TokenCredential credential, string subscriptionId)
     {
-        var options = new ArmClientOptions();
-        options.SetApiVersion(new ResourceType("Microsoft.Network/virtualNetworks"), "2025-03-01");
-        return new ArmClient(credential, subscriptionId, options);
+        return new ArmClient(credential, subscriptionId);
     }
 
     /// <summary>
