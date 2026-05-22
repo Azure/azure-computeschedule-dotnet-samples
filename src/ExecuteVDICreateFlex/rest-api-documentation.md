@@ -87,7 +87,7 @@ The examples supplied for this guide show the following value space. The validat
 Validator-enforced rules from the operation-layer input validator:
 
 1. `priorityProfile.allocationStrategy` is constrained by priority type: `Regular` allows `LowestPrice` and `Prioritized`, `Spot` allows `LowestPrice` and `CapacityOptimized`.
-2. `vmSizeProfiles[].rank` Must be specified when allocation strategy is `Prioritized`.
+2. `vmSizeProfiles[].rank` must be specified when allocation strategy is `Prioritized`.
 3. If `zoneAllocationPolicy` is provided, `baseProfile.zones` must also be provided.
 4. If `distributionStrategy` is `Prioritized`, `zonePreferences` must be provided.
 5. Each `zonePreferences[].zone` must also be present in the `baseProfile.zones` list.

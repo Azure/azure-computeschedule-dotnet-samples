@@ -24,9 +24,7 @@ internal static class FlexRequestBuilder
     private const string WindowsImageSku = "2025-datacenter-azure-edition";
     private const string WindowsImageVersion = "latest";
     private const int WindowsOsDiskSizeGB = 127;
-
     private const string NetworkConfigurationName = "samplenic";
-    private static readonly string[] s_zones = ["1", "2", "3"];
 
     public static ExecuteCreateFlexContent BuildRequest(
         FlexCreateConfig config,
@@ -109,7 +107,15 @@ internal static class FlexRequestBuilder
 
         if (includeZones)
         {
-            flexProperties.ZoneAllocationPolicy = BuildZoneAllocationPolicy();
+            flexProperties.ZoneAllocationPolicy = new ComputeScheduleZoneAllocationPolicy(ComputeScheduleDistributionStrategy.Prioritized)
+            {
+                ZonePreferences =
+                {
+                    new ComputeScheduleZonePreference("1") { Rank = 0 },
+                    new ComputeScheduleZonePreference("2") { Rank = 1 },
+                    new ComputeScheduleZonePreference("3") { Rank = 2 }
+                }
+            };
         }
 
         return flexProperties;
@@ -117,90 +123,76 @@ internal static class FlexRequestBuilder
 
     private static BulkVmConfiguration BuildBaseProfile(FlexCreateConfig config, string subnetId, bool includeZones)
     {
-        var baseProfile = new BulkVmConfiguration
+        var properties = new BulkActionVirtualMachineProperties
         {
-            ComputeApiVersion = ComputeApiVersion,
-            ResourceGroupName = config.ResourceGroupName,
-            Properties = new BulkActionVirtualMachineProperties
+            HardwareProfile = new VirtualMachineHardwareProfile
             {
-                HardwareProfile = new VirtualMachineHardwareProfile
+                VmSize = PrimaryVmSizeName
+            },
+            StorageProfile = new VirtualMachineStorageProfile
+            {
+                ImageReference = new ImageReference
                 {
-                    VmSize = PrimaryVmSizeName
+                    Publisher = WindowsImagePublisher,
+                    Offer = WindowsImageOffer,
+                    Sku = WindowsImageSku,
+                    Version = WindowsImageVersion
                 },
-                StorageProfile = new VirtualMachineStorageProfile
+                OSDisk = new VirtualMachineOSDisk(DiskCreateOptionType.FromImage)
                 {
-                    ImageReference = new ImageReference
+                    OSType = OperatingSystemType.Windows,
+                    Caching = CachingType.ReadWrite,
+                    ManagedDisk = new ComputeScheduleManagedDiskConfig
                     {
-                        Publisher = WindowsImagePublisher,
-                        Offer = WindowsImageOffer,
-                        Sku = WindowsImageSku,
-                        Version = WindowsImageVersion
+                        StorageAccountType = StorageAccountType.StandardLRS
                     },
-                    OSDisk = new VirtualMachineOSDisk(DiskCreateOptionType.FromImage)
-                    {
-                        OSType = OperatingSystemType.Windows,
-                        Caching = CachingType.ReadWrite,
-                        ManagedDisk = new ComputeScheduleManagedDiskConfig
-                        {
-                            StorageAccountType = StorageAccountType.StandardLRS
-                        },
-                        DeleteOption = DiskDeleteOptionType.Delete,
-                        DiskSizeGB = WindowsOsDiskSizeGB
-                    },
-                    DiskControllerType = DiskControllerType.SCSI
+                    DeleteOption = DiskDeleteOptionType.Delete,
+                    DiskSizeGB = WindowsOsDiskSizeGB
                 },
-                NetworkProfile = new VirtualMachineNetworkProfile
+                DiskControllerType = DiskControllerType.SCSI
+            },
+            NetworkProfile = new VirtualMachineNetworkProfile
+            {
+                NetworkInterfaceConfigurations =
                 {
-                    NetworkInterfaceConfigurations =
+                    new VirtualMachineNetworkInterfaceConfiguration(NetworkConfigurationName)
                     {
-                        new VirtualMachineNetworkInterfaceConfiguration(NetworkConfigurationName)
-                        {
-                            Properties = new VirtualMachineNetworkInterfaceConfigurationProperties(
-                                new[]
-                                {
-                                    new VirtualMachineNetworkInterfaceIPConfiguration(NetworkConfigurationName)
-                                    {
-                                        Properties = new VirtualMachineNetworkInterfaceIPConfigurationProperties
-                                        {
-                                            SubnetId = new ResourceIdentifier(subnetId),
-                                            Primary = true
-                                        }
-                                    }
-                                })
+                        Properties = new VirtualMachineNetworkInterfaceConfigurationProperties(
+                            new[]
                             {
-                                Primary = true,
-                                EnableIPForwarding = true
-                            }
+                                new VirtualMachineNetworkInterfaceIPConfiguration(NetworkConfigurationName)
+                                {
+                                    Properties = new VirtualMachineNetworkInterfaceIPConfigurationProperties
+                                    {
+                                        SubnetId = new ResourceIdentifier(subnetId),
+                                        Primary = true
+                                    }
+                                }
+                            })
+                        {
+                            Primary = true,
+                            EnableIPForwarding = true
                         }
-                    },
-                    NetworkApiVersion = NetworkApiVersion._20201101
-                }
+                    }
+                },
+                NetworkApiVersion = NetworkApiVersion._20201101
             }
         };
 
-        if (includeZones)
-        {
-            foreach (var zone in s_zones)
+        return includeZones
+            ? new BulkVmConfiguration
             {
-                baseProfile.Zones.Add(zone);
+                ComputeApiVersion = ComputeApiVersion,
+                ResourceGroupName = config.ResourceGroupName,
+                Zones = { "1", "2", "3" },
+                Properties = properties
             }
-        }
-
-        return baseProfile;
-    }
-
-    private static ComputeScheduleZoneAllocationPolicy BuildZoneAllocationPolicy()
-    {
-        var zoneAllocationPolicy = new ComputeScheduleZoneAllocationPolicy(ComputeScheduleDistributionStrategy.Prioritized);
-        for (var i = 0; i < s_zones.Length; i++)
-        {
-            zoneAllocationPolicy.ZonePreferences.Add(new ComputeScheduleZonePreference(s_zones[i])
+            : new BulkVmConfiguration
             {
-                Rank = i
-            });
-        }
-
-        return zoneAllocationPolicy;
+                ComputeApiVersion = ComputeApiVersion,
+                ResourceGroupName = config.ResourceGroupName,
+                Properties = properties
+            };
     }
 
     private static ScheduledActionExecutionParameterDetail BuildExecutionParameters() =>
