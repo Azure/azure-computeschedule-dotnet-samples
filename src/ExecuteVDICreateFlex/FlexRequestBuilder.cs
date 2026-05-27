@@ -1,172 +1,210 @@
 using Azure.Core;
 using Azure.ResourceManager.ComputeSchedule.Models;
-using UtilityMethods;
 
 namespace ExecuteVDICreateFlex;
 
 /// <summary>
-/// Builds the request objects needed to call the ExecuteCreateFlex API.
+/// Builds the complete ExecuteCreateFlex request in one place so customers can
+/// see the full SDK model shape without jumping through several helper methods.
 /// </summary>
 internal static class FlexRequestBuilder
 {
     public const int TotalRequestedVmCount = 1;
-    public const int MaxResourceCountPerRequest = 100;
-    public const int MaxParallelBatches = 20;
 
-    /// <summary>
-    /// Returns the execution parameters with the retry policy for the operation.
-    /// </summary>
-    public static ScheduledActionExecutionParameterDetail BuildExecutionParams() =>
-        new()
-        {
-            RetryPolicy = new UserRequestRetryPolicy()
-            {
-                // Number of times ScheduledActions retries on failure: range 0-7
-                RetryCount = 1,
-                // Time window in minutes for retries: range 5-120
-                RetryWindowInMinutes = 45
-            }
-        };
+    private const string PrimaryVmSizeName = "Standard_D2ads_v5";
+    private const string SecondaryVmSizeName = "Standard_E2ads_v5";
+    private const string TertiaryVmSizeName = "Standard_D2ds_v5";
 
-    /// <summary>
-    /// Returns <see cref="FlexProperties"/> describing the VM size profiles and
-    /// lowest-price allocation strategy.
-    /// </summary>
-    public static ComputeScheduleFlexProperties BuildFlexProperties() =>
-        new(
-            new[]
-            {
-                new ComputeScheduleVmSizeProfile(name: "Standard_D2ads_v5"),
-                new ComputeScheduleVmSizeProfile(name: "Standard_E2ads_v5"),
-                new ComputeScheduleVmSizeProfile(name: "Standard_D2ds_v5"),
-            },
-            ComputeScheduleOSType.Windows,
-            new ComputeSchedulePriorityProfile()
-        );
+    private const int RetryCount = 1;
+    private const int RetryWindowInMinutes = 45;
 
-    /// <summary>
-    /// Builds the <see cref="ResourceProvisionFlexPayload"/> with the base profile
-    /// (OS image, disk, network) and a per-VM resource override.
-    /// </summary>
-    /// <param name="config">Configuration values loaded from the .env file.</param>
-    /// <param name="subnetId">The fully-qualified resource ID of the subnet to attach VMs to.</param>
-    public static ResourceProvisionFlexPayload BuildFlexPayload(FlexCreateConfig config, string subnetId, int resourceCount, int batchIndex)
+    private const string ComputeApiVersion = "2023-09-01";
+    private const string WindowsImagePublisher = "MicrosoftWindowsServer";
+    private const string WindowsImageOffer = "WindowsServer";
+    private const string WindowsImageSku = "2025-datacenter-azure-edition";
+    private const string WindowsImageVersion = "latest";
+    private const int WindowsOsDiskSizeGB = 127;
+    private const string NetworkConfigurationName = "samplenic";
+
+    public static ExecuteCreateFlexContent BuildRequest(
+        FlexCreateConfig config,
+        string subnetId,
+        int resourceCount) =>
+        BuildRequest(config, subnetId, resourceCount, includeZones: false);
+
+    public static ExecuteCreateFlexContent BuildRequestWithZones(
+        FlexCreateConfig config,
+        string subnetId,
+        int resourceCount) =>
+        BuildRequest(config, subnetId, resourceCount, includeZones: true);
+
+    private static ExecuteCreateFlexContent BuildRequest(
+        FlexCreateConfig config,
+        string subnetId,
+        int resourceCount,
+        bool includeZones)
     {
-        var batchPrefix = BuildBatchPrefix(config.VmPrefix, batchIndex);
-        var virtualMachineBaseProfile = BuildBaseProfile(subnetId);
-        var virtualMachineOverrides = new List<BulkVmConfiguration>();
+        var resourcePrefix = BuildResourcePrefix(config.VmPrefix);
+        var payload = new ResourceProvisionFlexPayload(
+            resourceCount: resourceCount,
+            flexProperties: BuildFlexProperties(includeZones))
+        {
+            ResourcePrefix = resourcePrefix,
+            VirtualMachineBaseProfile = BuildBaseProfile(config, subnetId, includeZones)
+        };
 
         for (var i = 0; i < resourceCount; i++)
         {
-            var overrideName = BuildWindowsComputerName($"{batchPrefix}vm{i}");
-            virtualMachineOverrides.Add(BuildVmOverride(overrideName, config));
-        }
-
-        var payload = new ResourceProvisionFlexPayload(resourceCount: resourceCount, flexProperties: BuildFlexProperties())
-        {
-            ResourcePrefix = batchPrefix,
-            VirtualMachineBaseProfile = virtualMachineBaseProfile
-        };
-
-        foreach (var virtualMachineOverride in virtualMachineOverrides)
-        {
-            payload.VirtualMachineOverrides.Add(virtualMachineOverride);
-        }
-
-        return payload;
-    }
-
-    private static BulkVmConfiguration BuildBaseProfile(string subnetId) =>
-        new()
-        {
-            ComputeApiVersion = "2023-09-01",
-            Zones = { "1", "2", "3" },
-            Properties = new BulkActionVirtualMachineProperties
+            var virtualMachineName = BuildWindowsComputerName($"{resourcePrefix}vm{i}");
+            payload.VirtualMachineOverrides.Add(new BulkVmConfiguration
             {
-                HardwareProfile = new VirtualMachineHardwareProfile { VmSize = "Standard_D2ads_v5" },
-                StorageProfile = new VirtualMachineStorageProfile
+                Name = virtualMachineName,
+                ResourceGroupName = config.ResourceGroupName,
+                Properties = new BulkActionVirtualMachineProperties
                 {
-                    ImageReference = new ImageReference
+                    HardwareProfile = new VirtualMachineHardwareProfile
                     {
-                        Publisher = "MicrosoftWindowsServer",
-                        Offer = "WindowsServer",
-                        Sku = "2025-datacenter-azure-edition",
-                        Version = "latest"
+                        VmSize = PrimaryVmSizeName
                     },
-                    OSDisk = new VirtualMachineOSDisk(DiskCreateOptionType.FromImage)
+                    OsProfile = new VirtualMachineOSProfile
                     {
-                        OSType = OperatingSystemType.Windows,
-                        Caching = CachingType.ReadWrite,
-                        ManagedDisk = new ComputeScheduleManagedDiskConfig
+                        ComputerName = virtualMachineName,
+                        AdminUsername = config.VmAdminUsername,
+                        AdminPassword = config.VmAdminPassword,
+                        WindowsConfiguration = new WindowsConfiguration
                         {
-                            StorageAccountType = StorageAccountType.StandardLRS
-                        },
-                        DeleteOption = DiskDeleteOptionType.Delete,
-                        DiskSizeGB = 127
-                    },
-                    DiskControllerType = DiskControllerType.SCSI
-                },
-                NetworkProfile = new VirtualMachineNetworkProfile
-                {
-                    NetworkInterfaceConfigurations =
-                    {
-                        new VirtualMachineNetworkInterfaceConfiguration("samplenic")
-                        {
-                            Properties = new VirtualMachineNetworkInterfaceConfigurationProperties(
-                                new[]
-                                {
-                                    new VirtualMachineNetworkInterfaceIPConfiguration("samplenic")
-                                    {
-                                        Properties = new VirtualMachineNetworkInterfaceIPConfigurationProperties
-                                        {
-                                            SubnetId = new ResourceIdentifier(subnetId),
-                                            Primary = true
-                                        }
-                                    }
-                                })
-                            {
-                                Primary = true,
-                                EnableIPForwarding = true
-                            }
+                            ProvisionVmAgent = true,
+                            IsAutomaticUpdatesEnabled = true
                         }
-                    },
-                    NetworkApiVersion = NetworkApiVersion._20201101
-                }
-            }
-        };
-
-    private static BulkVmConfiguration BuildVmOverride(string name, FlexCreateConfig config) =>
-        new()
-        {
-            Name = name,
-            ResourceGroupName = config.ResourceGroupName,
-            Properties = new BulkActionVirtualMachineProperties
-            {
-                HardwareProfile = new VirtualMachineHardwareProfile { VmSize = "Standard_D2ads_v5" },
-                OsProfile = new VirtualMachineOSProfile
-                {
-                    ComputerName = name,
-                    AdminUsername = config.VmAdminUsername,
-                    AdminPassword = config.VmAdminPassword,
-                    WindowsConfiguration = new WindowsConfiguration
-                    {
-                        ProvisionVmAgent = true,
-                        IsAutomaticUpdatesEnabled = true
                     }
                 }
+            });
+        }
+
+        return new ExecuteCreateFlexContent(payload, BuildExecutionParameters())
+        {
+            CorrelationId = Guid.NewGuid().ToString()
+        };
+    }
+
+    private static ComputeScheduleFlexProperties BuildFlexProperties(bool includeZones)
+    {
+        var flexProperties = new ComputeScheduleFlexProperties(
+            new ComputeScheduleVmSizeProfile[]
+            {
+                // if strategy is set to Prioritized, then rank is required.
+                // example: new ComputeScheduleVmSizeProfile(name: PrimaryVmSizeName) { Rank = 1 },
+                new ComputeScheduleVmSizeProfile(name: PrimaryVmSizeName),
+                new ComputeScheduleVmSizeProfile(name: SecondaryVmSizeName),
+                new ComputeScheduleVmSizeProfile(name: TertiaryVmSizeName),
+            },
+            ComputeScheduleOSType.Windows,
+            new ComputeSchedulePriorityProfile
+            {
+                Type = ComputeSchedulePriorityType.Regular,
+                AllocationStrategy = ComputeScheduleAllocationStrategy.LowestPrice
+            });
+
+        if (includeZones)
+        {
+            flexProperties.ZoneAllocationPolicy = new ComputeScheduleZoneAllocationPolicy(ComputeScheduleDistributionStrategy.Prioritized)
+            {
+                ZonePreferences =
+                {
+                    new ComputeScheduleZonePreference("1") { Rank = 0 },
+                    new ComputeScheduleZonePreference("2") { Rank = 1 },
+                    new ComputeScheduleZonePreference("3") { Rank = 2 }
+                }
+            };
+        }
+
+        return flexProperties;
+    }
+
+    private static BulkVmConfiguration BuildBaseProfile(FlexCreateConfig config, string subnetId, bool includeZones)
+    {
+        var properties = new BulkActionVirtualMachineProperties
+        {
+            HardwareProfile = new VirtualMachineHardwareProfile
+            {
+                VmSize = PrimaryVmSizeName
+            },
+            StorageProfile = new VirtualMachineStorageProfile
+            {
+                ImageReference = new ImageReference
+                {
+                    Publisher = WindowsImagePublisher,
+                    Offer = WindowsImageOffer,
+                    Sku = WindowsImageSku,
+                    Version = WindowsImageVersion
+                },
+                OSDisk = new VirtualMachineOSDisk(DiskCreateOptionType.FromImage)
+                {
+                    OSType = OperatingSystemType.Windows,
+                    Caching = CachingType.ReadWrite,
+                    ManagedDisk = new ComputeScheduleManagedDiskConfig
+                    {
+                        StorageAccountType = StorageAccountType.StandardLRS
+                    },
+                    DeleteOption = DiskDeleteOptionType.Delete,
+                    DiskSizeGB = WindowsOsDiskSizeGB
+                },
+                DiskControllerType = DiskControllerType.SCSI
+            },
+            NetworkProfile = new VirtualMachineNetworkProfile
+            {
+                NetworkInterfaceConfigurations =
+                {
+                    new VirtualMachineNetworkInterfaceConfiguration(NetworkConfigurationName)
+                    {
+                        Properties = new VirtualMachineNetworkInterfaceConfigurationProperties(
+                            new[]
+                            {
+                                new VirtualMachineNetworkInterfaceIPConfiguration(NetworkConfigurationName)
+                                {
+                                    Properties = new VirtualMachineNetworkInterfaceIPConfigurationProperties
+                                    {
+                                        SubnetId = new ResourceIdentifier(subnetId),
+                                        Primary = true
+                                    }
+                                }
+                            })
+                        {
+                            Primary = true,
+                            EnableIPForwarding = true
+                        }
+                    }
+                },
+                NetworkApiVersion = NetworkApiVersion._20201101
             }
         };
 
-    /// <summary>
-    /// Wraps the payload and execution params into the final
-    /// <see cref="ExecuteCreateFlexContent"/> ready to send to the API.
-    /// </summary>
-    public static ExecuteCreateFlexContent BuildRequest(
-        ResourceProvisionFlexPayload payload,
-        ScheduledActionExecutionParameterDetail executionParams) =>
-        new(payload, executionParams)
+        return includeZones
+            ? new BulkVmConfiguration
+            {
+                ComputeApiVersion = ComputeApiVersion,
+                ResourceGroupName = config.ResourceGroupName,
+                Zones = { "1", "2", "3" },
+                Properties = properties
+            }
+            : new BulkVmConfiguration
+            {
+                ComputeApiVersion = ComputeApiVersion,
+                ResourceGroupName = config.ResourceGroupName,
+                Properties = properties
+            };
+    }
+
+    private static ScheduledActionExecutionParameterDetail BuildExecutionParameters() =>
+        new()
         {
-            CorrelationId = Guid.NewGuid().ToString()
+            RetryPolicy = new UserRequestRetryPolicy
+            {
+                // Number of times ScheduledActions retries on failure: range 0-7.
+                RetryCount = RetryCount,
+                // Time window in minutes for retries: range 5-120.
+                RetryWindowInMinutes = RetryWindowInMinutes
+            }
         };
 
     private static string BuildWindowsComputerName(string prefix)
@@ -202,7 +240,7 @@ internal static class FlexRequestBuilder
         return candidate;
     }
 
-    private static string BuildBatchPrefix(string vmPrefix, int batchIndex)
+    private static string BuildResourcePrefix(string vmPrefix)
     {
         var sanitizedPrefix = new string(vmPrefix.Where(ch => char.IsLetterOrDigit(ch) || ch == '-').ToArray());
         if (string.IsNullOrWhiteSpace(sanitizedPrefix))
@@ -210,6 +248,6 @@ internal static class FlexRequestBuilder
             sanitizedPrefix = "vm";
         }
 
-        return $"{sanitizedPrefix}b{batchIndex}-";
+        return $"{sanitizedPrefix}-";
     }
 }

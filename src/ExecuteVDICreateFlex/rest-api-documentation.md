@@ -26,8 +26,6 @@ Example:
 https://management.azure.com/subscriptions/{subscriptionId}/providers/Microsoft.ComputeSchedule/locations/eastus2euap/virtualMachinesExecuteCreateFlex?api-version=2026-04-15-preview
 ```
 
-The location in the request URL must match the `baseProfile.location` value in the request body. Use the endpoint and `api-version` exactly as shown in the current preview example unless your environment has a newer published version available.
-
 ## Overview
 
 At a high level, a Flex create request has three main parts:
@@ -47,10 +45,10 @@ Within `resourceConfigParameters`, clients define a reusable base VM profile, a 
 
 | Field               | Type    | Required | Description                                                                      | Notes                                                                                                           |
 | --------------------- | --------- | ---------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `baseProfile`       | object  | Yes      | Defines the shared VM template used as the starting point for created resources. | Includes location, resource group, identity, compute, storage, OS, and network settings.                        |
+| `baseProfile`       | object  | Yes      | Defines the shared VM template used as the starting point for created resources. | Includes resource group, identity, compute, storage, OS, and network settings.                                 |
 | `resourceOverrides` | array   | Yes      | Per-resource override objects applied on top of `baseProfile`.                    | Scheduled Actions usage populates one object per resource, with observed fields including `name` and `location`. |
 | `resourceCount`     | integer | Yes      | Number of resources to create.                                                   | Examples use a placeholder such as `{{resourceCount}}`.                                                          |
-| `resourcePrefix`    | string  | Yes      | Prefix used to name created resources.                                           | Examples append a scenario suffix such as `-1`, `-2`, or `-14`.                                                  |
+| `resourcePrefix`    | string  | Yes      | Prefix used to name created resources.                                           | Examples append a numeric suffix such as `-1`, `-2`, or `-14`.                                                   |
 | `flexProperties`    | object  | Yes      | Defines Flex-specific placement and priority behavior.                           | This is the primary block for SKU, zone, and Spot selection.                                                    |
 
 ## Base Profile
@@ -69,9 +67,9 @@ Within `resourceConfigParameters`, clients define a reusable base VM profile, a 
 | `vmSizeProfiles[].rank`                       | integer | No       | `0`, `1`, `2`                                                | Required when `priorityProfile.allocationStrategy` is `Prioritized`.        |
 | `osType`                                      | string  | Yes      | `Windows`, `Linux`                                           | OS type aligned with the base profile image and OS settings.                   |
 | `priorityProfile.type`                        | string  | No      | `Regular`, `Spot`                                                    | Capacity purchase model.                                                       |
-| `priorityProfile.allocationStrategy`          | string  | Yes      | `Regular`: `Prioritized`, `LowestPrice` ; `Spot`: `CapacityOptimized`                     | Allowed values depend on`priorityProfile.type`.                                |
-| `zoneAllocationPolicy.distributionStrategy`   | string  | No       | `Prioritized`, `BestEffortSingleZone`                        | If `zoneAllocationPolicy` is provided, top-level `zones` must also be provided. |
-| `zoneAllocationPolicy.zonePreferences[].zone` | string  | No       | `1`, `2`, `3`                                                | Each zone must also appear in the top-level`zones` list.                       |
+| `priorityProfile.allocationStrategy`          | string  | Yes      | `Regular`: `Prioritized`, `LowestPrice` ; `Spot`: `LowestPrice`, `CapacityOptimized`                     | Allowed values depend on`priorityProfile.type`.                                |
+| `zoneAllocationPolicy.distributionStrategy`   | string  | No       | `Prioritized`, `BestEffortSingleZone`                        | If `zoneAllocationPolicy` is provided, `baseProfile.zones` must also be provided. |
+| `zoneAllocationPolicy.zonePreferences[].zone` | string  | No       | `1`, `2`, `3`                                                | Each zone must also appear in the `baseProfile.zones` list.                    |
 | `zoneAllocationPolicy.zonePreferences[].rank` | integer | No       | `0`, `1`, `2`, `3`                                           | Required when `zoneAllocationPolicy.distributionStrategy` is `Prioritized` |
 
 ### Supported values shown in current examples
@@ -88,12 +86,11 @@ The examples supplied for this guide show the following value space. The validat
 
 Validator-enforced rules from the operation-layer input validator:
 
-1. `priorityProfile.type` is required.
-2. `priorityProfile.allocationStrategy` is constrained by priority type: `Regular` allows `LowestPrice` and `Prioritized`.
-3. `vmSizeProfiles[].rank` can only be specified when allocation strategy is `Prioritized`.
-4. If `zoneAllocationPolicy` is provided, top-level `zones` must also be provided.
-5. If `distributionStrategy` is `Prioritized`, `zonePreferences` must be provided.
-6. Each `zonePreferences[].zone` must also be present in the top-level `zones` list.
+1. `priorityProfile.allocationStrategy` is constrained by priority type: `Regular` allows `LowestPrice` and `Prioritized`, `Spot` allows `LowestPrice` and `CapacityOptimized`.
+2. `vmSizeProfiles[].rank` must be specified when allocation strategy is `Prioritized`.
+3. If `zoneAllocationPolicy` is provided, `baseProfile.zones` must also be provided.
+4. If `distributionStrategy` is `Prioritized`, `zonePreferences` must be provided.
+5. Each `zonePreferences[].zone` must also be present in the `baseProfile.zones` list.
 
 ## Execution Parameters
 
@@ -110,12 +107,12 @@ All supplied examples use the same `executionParameters` shape.
 ## How Configuration Choices Work
 
 1. Choose whether the request is regional or zonal. Regional examples omit `baseProfile.zones`. Zonal examples include one or more explicit zones.
-2. Choose one or more VM SKUs in `vmSizeProfiles`. Single-SKU scenarios use one entry, while multi-SKU scenarios include two or three entries.
+2. Choose one or more VM SKUs in `vmSizeProfiles`. Single-SKU examples use one entry, while multi-SKU examples include two or three entries.
 3. Decide whether to include ranks. The validator only allows `vmSizeProfiles[].rank` when `priorityProfile.allocationStrategy` is `Prioritized`.
 4. Choose `Regular` in `priorityProfile.type`.
 5. Choose an allocation strategy compatible with the priority type. `Regular` supports `Prioritized` and `LowestPrice`. `Spot` supports `LowestPrice` and `CapacityOptimized`.
-6. If zones matter, add top-level `zones`. If you also add `zoneAllocationPolicy`, the validator requires `zones` to be present.
-7. If `zoneAllocationPolicy.distributionStrategy` is `Prioritized`, provide `zonePreferences`, and ensure each preference zone is also present in the top-level `zones` list.
+6. If zones matter, add `baseProfile.zones`. If you also add `zoneAllocationPolicy`, the validator requires `baseProfile.zones` to be present.
+7. If `zoneAllocationPolicy.distributionStrategy` is `Prioritized`, provide `zonePreferences`, and ensure each preference zone is also present in the `baseProfile.zones` list.
 
 ## Representative Examples
 
@@ -127,7 +124,6 @@ This section includes a representative set of payloads that cover the main patte
 {
   "resourceConfigParameters": {
     "baseProfile": {
-      "location": "{{location}}",
       "ResourceGroupName": "{{resourceGroupName}}",
       "ComputeAPIVersion": "2025-04-01",
       "tags": {
@@ -174,7 +170,6 @@ This section includes a representative set of payloads that cover the main patte
     "resourceCount": {{resourceCount}},
     "resourcePrefix": "vdi",
     "flexProperties": {
-      "capacityType": "VM",
       "vmSizeProfiles": [
         { "name": "Standard_D2ads_v5", "rank": 0 },
         { "name": "Standard_E2ads_v5", "rank": 1 },
@@ -202,7 +197,6 @@ This section includes a representative set of payloads that cover the main patte
 {
   "resourceConfigParameters": {
     "baseProfile": {
-      "location": "{{location}}",
       "ResourceGroupName": "{{resourceGroupName}}",
       "ComputeAPIVersion": "2025-04-01",
       "tags": {
@@ -252,7 +246,6 @@ This section includes a representative set of payloads that cover the main patte
     "resourceCount": {{resourceCount}},
     "resourcePrefix": "vdi",
     "flexProperties": {
-      "capacityType": "VM",
       "vmSizeProfiles": [
         { "name": "Standard_D2ads_v5" },
         { "name": "Standard_E2ads_v5" },
@@ -262,6 +255,92 @@ This section includes a representative set of payloads that cover the main patte
       "priorityProfile": {
         "type": "Regular",
         "allocationStrategy": "LowestPrice"
+      }
+    }
+  },
+  "executionParameters": {
+    "retryPolicy": {
+      "retryCount": 1,
+      "retryWindowInMinutes": 60
+    }
+  }
+}
+```
+
+### Example: regular, zonal, lowest price, Windows, three SKUs
+
+```json
+{
+  "resourceConfigParameters": {
+    "baseProfile": {
+      "ResourceGroupName": "{{resourceGroupName}}",
+      "ComputeAPIVersion": "2025-04-01",
+      "zones": [
+        "1",
+        "2",
+        "3"
+      ],
+      "tags": {
+        "<key>": "<value>"
+      },
+      "identity": { "type": "SystemAssigned" },
+      "properties": {
+        "hardwareProfile": { "vmSize": "Standard_D2ads_v5" },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2022-Datacenter",
+            "version": "latest"
+          },
+          "osDisk": {
+            "createOption": "FromImage",
+            "managedDisk": {},
+            "diskSizeGB": 127
+          }
+        },
+        "osProfile": {
+          "computerName": "saflexvm",
+          "adminUsername": "testadmin",
+          "adminPassword": "{{password}}",
+          "windowsConfiguration": {}
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "/subscriptions/{{subscriptionId}}/resourceGroups/{{resourceGroupName}}/providers/Microsoft.Network/networkInterfaces/{{nicName}}",
+              "properties": { "primary": true }
+            }
+          ]
+        }
+      }
+    },
+    "resourceOverrides": [
+      {
+        "name": "vdi-vm-0",
+        "location": "{{location}}"
+      }
+    ],
+    "resourceCount": {{resourceCount}},
+    "resourcePrefix": "vdi",
+    "flexProperties": {
+      "vmSizeProfiles": [
+        { "name": "Standard_D2ads_v5" },
+        { "name": "Standard_E2ads_v5" },
+        { "name": "Standard_D2ds_v5" }
+      ],
+      "osType": "Windows",
+      "priorityProfile": {
+        "type": "Regular",
+        "allocationStrategy": "LowestPrice"
+      },
+      "zoneAllocationPolicy": {
+        "distributionStrategy": "Prioritized",
+        "zonePreferences": [
+          { "zone": "1", "rank": 0 },
+          { "zone": "2", "rank": 1 },
+          { "zone": "3", "rank": 2 }
+        ]
       }
     }
   },
@@ -360,7 +439,7 @@ The following sample is anonymized. Replace placeholder values with your own sub
 | Question                                     | Guidance                                                                                                              |
 | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | When should I include `zones`?                | Include `baseProfile.zones` when you want a zonal request. Regional examples omit it entirely.                         |
-| When should I include `zoneAllocationPolicy`? | Include it when zone distribution or zone ordering matters. Current examples only show this block in zonal scenarios. |
+| When should I include `zoneAllocationPolicy`? | Include it when zone distribution or zone ordering matters. Current examples only show this block in zonal requests. |
 | When is `vmSizeProfiles[].rank` useful?       | Ranked entries appear in prioritized examples and help express preference order across multiple SKUs.                 |
 | How do Windows and Linux requests differ?    | Update `imageReference`, `osProfile`, `osDisk.diskSizeGB`, and `flexProperties.osType` together.                       |
 
@@ -381,7 +460,7 @@ Yes, unless `priorityProfile.allocationStrategy` is `Prioritized`. The validator
 
 **Q: Do I need `zoneAllocationPolicy` whenever I specify zones?**
 
-No. But if you do specify `zoneAllocationPolicy`, the validator requires top-level `zones` to be present. If the distribution strategy is `Prioritized`, `zonePreferences` are also required.
+No. But if you do specify `zoneAllocationPolicy`, the validator requires `baseProfile.zones` to be present. If the distribution strategy is `Prioritized`, `zonePreferences` are also required.
 
 **Q: What fields change between regional and zonal requests?**
 
