@@ -43,6 +43,7 @@ internal static class ExecuteVDICreateFlexApiDemo
 
     private static ApiSampleContext LoadSampleContext(int? resourceCountOverride, FlexRunLogger logger)
     {
+        logger ??= FlexRunLogger.Disabled;
         var config = FlexCreateConfig.Load();
         var resourceCount = resourceCountOverride ?? FlexRequestBuilder.TotalRequestedVmCount;
         var subscriptionId = config.SubscriptionId;
