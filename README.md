@@ -78,6 +78,7 @@ Use the project file path for whichever sample you want to run:
 ```bash
 dotnet run --project src/ExecuteCreate/ExecuteCreate.csproj
 dotnet run --project src/ExecuteVDICreateFlex/ExecuteVDICreateFlex.csproj -- --api-demo --resource-count 5
+dotnet run --project src/ExecuteVDICreateFlex/ExecuteVDICreateFlex.csproj -- --api-demo-json-string --resource-count 5
 dotnet run --project src/ExecuteStart/ExecuteStart.csproj
 dotnet run --project src/ExecuteDeallocate/ExecuteDeallocate.csproj
 dotnet run --project src/ExecuteDelete/ExecuteDelete.csproj
@@ -91,6 +92,7 @@ dotnet run --project src/AllScenarios/AllScenarios.csproj
 ```bash
 dotnet run --project ./ExecuteCreate/ExecuteCreate.csproj
 dotnet run --project ./ExecuteVDICreateFlex/ExecuteVDICreateFlex.csproj -- --api-demo --resource-count 5
+dotnet run --project ./ExecuteVDICreateFlex/ExecuteVDICreateFlex.csproj -- --api-demo-json-string --resource-count 5
 dotnet run --project ./ExecuteStart/ExecuteStart.csproj
 dotnet run --project ./ExecuteDeallocate/ExecuteDeallocate.csproj
 dotnet run --project ./ExecuteDelete/ExecuteDelete.csproj
@@ -111,6 +113,7 @@ Some projects support additional command-line arguments. For example, `ExecuteVD
 
 ```bash
 dotnet run -- --api-demo --resource-count 5
+dotnet run -- --api-demo-json-string --resource-count 5
 ```
 
 ## Sample Notes

@@ -38,6 +38,9 @@ internal static class FlexRequestBuilder
         int resourceCount) =>
         BuildRequest(config, subnetId, resourceCount, includeZones: true);
 
+    public static ScheduledActionExecutionParameterDetail BuildExecutionParams() =>
+        BuildExecutionParameters();
+
     private static ExecuteCreateFlexContent BuildRequest(
         FlexCreateConfig config,
         string subnetId,
