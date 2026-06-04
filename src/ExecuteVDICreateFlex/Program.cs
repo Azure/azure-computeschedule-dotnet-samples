@@ -1,5 +1,3 @@
-using ExecuteVDICreateFlex.Scenarios;
-
 namespace ExecuteVDICreateFlex;
 
 public static class Program
