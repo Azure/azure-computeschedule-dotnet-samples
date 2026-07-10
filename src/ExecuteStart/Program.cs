@@ -1,7 +1,7 @@
 ﻿using Azure.Core;
 using Azure.Identity;
 using Azure.ResourceManager;
-using Azure.ResourceManager.ComputeSchedule.Models;
+using Azure.ResourceManager.ComputeBulkActions.Models;
 using UtilityMethods;
 
 namespace ExecuteStart
@@ -15,6 +15,9 @@ namespace ExecuteStart
             // Location: The location of the virtual machines
             const string location = "eastus2euap";
 
+            // ArmLocation: The ARM location of the virtual machines, in this case, we are using a dummy ARM location
+            var armLocation = "brazilus";
+
             // SubscriptionId: The subscription id under which the virtual machines are located, in this case, we are using a dummy subscriptionId
             const string subscriptionId = "a4f8220e-84cb-47a6-b2c0-c1900805f616";
 
@@ -25,29 +28,37 @@ namespace ExecuteStart
             // Credential: The Azure credential used to authenticate the request
             TokenCredential cred = new DefaultAzureCredential();
 
+            // Adding custom headers to the ARM client (optional)
+            var customHeaders = new Dictionary<string, string>
+            {
+                ["x-ms-sa-completion-notification"] = "true",
+            };
+            var startOptions = HelperMethods.GetGeneralOptions(armLocation);
+            startOptions.AddPolicy(new SetHeaderPolicy(customHeaders), HttpPipelinePosition.PerCall);
+
             // Client: The Azure Resource Manager client used to interact with the Azure Resource Manager API
-            ArmClient client = new(cred);
+            ArmClient client = new(cred, subscriptionId, startOptions);
+
             var subscriptionResource = HelperMethods.GetSubscriptionResource(client, subscriptionId);
-            var resourceGroupResource = await subscriptionResource.GetResourceGroupAsync(resourceGroupName);
 
             // Execution parameters for the request including the retry policy used by Scheduledactions to retry the operation in case of failures
-            var executionParams = new ScheduledActionExecutionParameterDetail()
+            var executionParams = new BulkActionExecutionConfig()
             {
-                RetryPolicy = new UserRequestRetryPolicy()
+                RetryPolicy = new BulkActionRetryPolicy()
                 {
                     // Number of times ScheduledActions should retry the operation in case of failures: Range 0-7
-                    RetryCount = 3,
+                    RetryCount = 0,
                     // Time window in minutes within which ScheduledActions should retry the operation in case of failures: Range in minutes 5-120
-                    RetryWindowInMinutes = 45
+                    RetryWindowInMinutes = 15
                 }
             };
 
-            // List of virtual machine resource identifiers to perform execute/submit type operations on, in this case, we are using dummy VMs. Virtual Machines must all be under the same subscriptionid
-            var resourceIds = new List<ResourceIdentifier>()
+            // List of virtual machines to be startated, in this case, we are generating 10 virtual machines with the prefix "arm-on" and context prefix "arm-multivm-test"
+            var resourcesWithContext = HelperMethods.GenerateResourcesWithContext(subscriptionId, resourceGroupName, "arm-multivm-test", "arm-on", 10);
+
+            var executeStartRequest = new ExecuteStartContent(executionParams, Guid.NewGuid().ToString())
             {
-                new($"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/dummy-vm-600"),
-                new($"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/dummy-vm-611"),
-                new($"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/dummy-vm-612"),
+                ResourcesWithContextItems = resourcesWithContext
             };
 
             await ComputescheduleOperations.ExecuteStartOperation(
@@ -55,7 +66,7 @@ namespace ExecuteStart
                 executionParams,
                 subscriptionResource,
                 blockedOperationsException,
-                resourceIds,
+                executeStartRequest,
                 location);
         }
     }

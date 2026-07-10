@@ -2,8 +2,8 @@ using UtilityMethods;
 using Azure;
 using Azure.Core;
 using Azure.ResourceManager;
-using Azure.ResourceManager.ComputeSchedule;
-using Azure.ResourceManager.ComputeSchedule.Models;
+using Azure.ResourceManager.ComputeBulkActions;
+using Azure.ResourceManager.ComputeBulkActions.Models;
 using Azure.ResourceManager.Resources;
 
 namespace OperationFallback;
@@ -76,12 +76,12 @@ public static class CreateWithDeleteFallback
         string subnetId = $"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/virtualNetworks/{VnetName}/subnets/{SubnetName}";
 
         // Build retry policy with Delete fallback
-        var executionParams = new ScheduledActionExecutionParameterDetail()
+        var executionParams = new BulkActionExecutionConfig()
         {
-            RetryPolicy = new UserRequestRetryPolicy()
+            RetryPolicy = new BulkActionRetryPolicy()
             {
                 RetryWindowInMinutes = 30,
-                OnFailureAction = "Delete"
+                OnFailureAction = ResourceOperationType.Delete
             }
         };
 
@@ -172,7 +172,7 @@ public static class CreateWithDeleteFallback
         };
 
         // Submit the create operation
-        var result = await subscriptionResource.ExecuteVirtualMachineCreateOperationAsync(location, request);
+        var result = await subscriptionResource.VirtualMachinesExecuteCreateBulkActionAsync(location, request);
 
         var operationIds = UtilityMethods.HelperMethods.ExcludeResourcesNotProcessed(result.Value.Results).Keys.ToHashSet();
 
@@ -190,33 +190,29 @@ public static class CreateWithDeleteFallback
         {
             Console.WriteLine($"[Result] Operation {opId}: State = {details.State}");
 
-            if (details.State == ScheduledActionOperationState.Succeeded)
+            if (details.State == OperationState.Succeeded)
             {
                 Console.WriteLine("[OK] Create succeeded — no fallback needed.");
             }
-            else if (details.State == ScheduledActionOperationState.Failed)
+            else if (details.State == OperationState.Failed)
             {
                 if (details.ResourceOperationError is not null)
                 {
                     Console.WriteLine($"[Error] Primary: {details.ResourceOperationError.ErrorCode} — {details.ResourceOperationError.ErrorDetails}");
                 }
 
-                if (details.FallbackOperationInfo is not null)
+                if (details.FallbackOperation is not null)
                 {
-                    var fallback = details.FallbackOperationInfo;
+                    var fallback = details.FallbackOperation;
                     Console.WriteLine($"[Fallback] {fallback.LastOpType}: Status = {fallback.Status}");
 
-                    if (fallback.Status == ScheduledActionOperationState.Succeeded)
+                    if (fallback.Status == "Succeeded")
                     {
                         Console.WriteLine("[Fallback] [OK] Succeeded — partially-created VM was deleted.");
                     }
                     else
                     {
                         Console.WriteLine("[Fallback] [FAIL] Failed. Manual cleanup may be needed.");
-                        if (fallback.Error is not null)
-                        {
-                            Console.WriteLine($"[Fallback] Error: {fallback.Error.ErrorCode} — {fallback.Error.ErrorDetails}");
-                        }
                     }
                 }
                 else
