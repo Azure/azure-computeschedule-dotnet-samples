@@ -1,8 +1,8 @@
 ﻿using Azure;
 using Azure.Core;
 using Azure.ResourceManager;
-using Azure.ResourceManager.ComputeSchedule;
-using Azure.ResourceManager.ComputeSchedule.Models;
+using Azure.ResourceManager.ComputeBulkActions;
+using Azure.ResourceManager.ComputeBulkActions.Models;
 using Azure.ResourceManager.Resources;
 using System.Diagnostics;
 using System.ClientModel.Primitives;
@@ -268,12 +268,12 @@ namespace UtilityMethods
         /// </summary>
         /// <param name="state"></param>
         /// <returns></returns>
-        public static bool IsOperationTerminal(ScheduledActionOperationState? state)
+        public static bool IsOperationTerminal(OperationState? state)
         {
             return state != null &&
-                (state == ScheduledActionOperationState.Succeeded ||
-                state == ScheduledActionOperationState.Failed ||
-                state == ScheduledActionOperationState.Cancelled);
+                (state == OperationState.Succeeded ||
+                state == OperationState.Failed ||
+                state == OperationState.Cancelled);
         }
 
         /// <summary>
@@ -341,7 +341,7 @@ namespace UtilityMethods
         /// </summary>
         /// <param name="results"></param>
         /// <returns></returns>
-        public static Dictionary<string, ResourceIdentifier?> ExcludeResourcesNotProcessed(IEnumerable<ResourceOperationResult> results)
+        public static Dictionary<string, ResourceIdentifier?> ExcludeResourcesNotProcessed(IEnumerable<BulkActionResourceOperationInfo> results)
         {
             var validOperations = new Dictionary<string, ResourceIdentifier?>();
             foreach (var result in results)
@@ -350,7 +350,7 @@ namespace UtilityMethods
                 {
                     Console.WriteLine($"VM with resourceId: {result.ResourceId} encountered the following error: errorCode {result.ErrorCode}, errorDetails: {result.ErrorDetails}");
                 }
-                else if (result.Operation.State == ScheduledActionOperationState.Blocked)
+                else if (result.Operation.State == OperationState.Blocked)
                 {
                     /// Operations on virtual machines are set to blocked state in Computeschedule when there is an ongoing outage internally or in downstream services.
                     /// These operations could still be processed later as long as their due time for execution is not past deadline time + retrywindowinminutes
@@ -380,7 +380,7 @@ namespace UtilityMethods
             await Task.Delay(s_initialWaitTimeBeforePollingInSeconds);
 
             GetOperationStatusContent getOpsStatusRequest = new(opIdsFromOperationReq, Guid.NewGuid().ToString());
-            GetOperationStatusResult? response = await resource.GetVirtualMachineOperationStatusAsync(location, getOpsStatusRequest);
+            GetOperationStatusResult? response = await resource.VirtualMachinesGetOperationStatusBulkActionAsync(location, getOpsStatusRequest);
 
             var opIdsToResourceIds = new Dictionary<string, ResourceIdentifier>();
 
@@ -392,7 +392,7 @@ namespace UtilityMethods
                 if (!ShouldRetryPolling(response, opIdsFromOperationReq.Count, completedOps))
                 {
                     opIdsToResourceIds = response.Results.ToDictionary(x => x.Operation.OperationId, x => x.ResourceId);
-                    GetOperationStatusResult? allOpsStatus = await resource.GetVirtualMachineOperationStatusAsync(location, new(opIdsFromOperationReq, Guid.NewGuid().ToString()));
+                    GetOperationStatusResult? allOpsStatus = await resource.VirtualMachinesGetOperationStatusBulkActionAsync(location, new(opIdsFromOperationReq, Guid.NewGuid().ToString()));
                     Console.WriteLine(ModelReaderWriter.Write(allOpsStatus, ModelReaderWriterOptions.Json).ToString());
                     break;
                 }
@@ -400,7 +400,7 @@ namespace UtilityMethods
                 {
                     var incompleteOperations = ExcludeCompletedOperations(completedOps, opIdsFromOperationReq);
                     GetOperationStatusContent pendingOpIds = new(incompleteOperations, Guid.NewGuid().ToString());
-                    response = await resource.GetVirtualMachineOperationStatusAsync(location, pendingOpIds);
+                    response = await resource.VirtualMachinesGetOperationStatusBulkActionAsync(location, pendingOpIds);
                 }
 
                 // This value controls the interval between each poll call
@@ -425,7 +425,7 @@ namespace UtilityMethods
             var stopwatch = Stopwatch.StartNew();
             await Task.Delay(TimeSpan.FromSeconds(s_initialWaitTimeBeforePollingInSeconds));
 
-            GetOperationStatusResult? response = await resource.GetVirtualMachineOperationStatusAsync(
+            GetOperationStatusResult? response = await resource.VirtualMachinesGetOperationStatusBulkActionAsync(
                 location,
                 new GetOperationStatusContent(opIdsFromOperationReq, Guid.NewGuid().ToString()));
 
@@ -443,9 +443,9 @@ namespace UtilityMethods
                     }
                 }
 
-                var succeededCount = completedOps.Values.Count(op => op.State == ScheduledActionOperationState.Succeeded);
-                var failedCount = completedOps.Values.Count(op => op.State == ScheduledActionOperationState.Failed);
-                var cancelledCount = completedOps.Values.Count(op => op.State == ScheduledActionOperationState.Cancelled);
+                var succeededCount = completedOps.Values.Count(op => op.State == OperationState.Succeeded);
+                var failedCount = completedOps.Values.Count(op => op.State == OperationState.Failed);
+                var cancelledCount = completedOps.Values.Count(op => op.State == OperationState.Cancelled);
                 var completedCount = completedOps.Count;
                 var inProgressCount = opIdsFromOperationReq.Count - completedCount;
                 var elapsed = stopwatch.Elapsed;
@@ -496,7 +496,7 @@ namespace UtilityMethods
                     break;
                 }
 
-                response = await resource.GetVirtualMachineOperationStatusAsync(
+                response = await resource.VirtualMachinesGetOperationStatusBulkActionAsync(
                     location,
                     new GetOperationStatusContent(incompleteOperations, Guid.NewGuid().ToString()));
             }
@@ -508,7 +508,7 @@ namespace UtilityMethods
             }
 
             var succeededResources = completedOps
-                .Where(kvp => kvp.Value.State == ScheduledActionOperationState.Succeeded)
+                .Where(kvp => kvp.Value.State == OperationState.Succeeded)
                 .Select(kvp =>
                 {
                     opIdsToResourceIds.TryGetValue(kvp.Key, out var resourceId);
@@ -518,7 +518,7 @@ namespace UtilityMethods
                 .ToDictionary(item => item.Key, item => item.ResourceId!);
 
             var failedOperations = completedOps
-                .Where(kvp => kvp.Value.State == ScheduledActionOperationState.Failed || kvp.Value.State == ScheduledActionOperationState.Cancelled)
+                .Where(kvp => kvp.Value.State == OperationState.Failed || kvp.Value.State == OperationState.Cancelled)
                 .Select(kvp =>
                 {
                     opIdsToResourceIds.TryGetValue(kvp.Key, out var resourceId);
@@ -535,9 +535,9 @@ namespace UtilityMethods
             var summary = new FlexPollingSummary(
                 ValidCount: opIdsFromOperationReq.Count,
                 CompletedCount: completedOps.Count,
-                SucceededCount: completedOps.Values.Count(op => op.State == ScheduledActionOperationState.Succeeded),
-                FailedCount: completedOps.Values.Count(op => op.State == ScheduledActionOperationState.Failed),
-                CancelledCount: completedOps.Values.Count(op => op.State == ScheduledActionOperationState.Cancelled),
+                SucceededCount: completedOps.Values.Count(op => op.State == OperationState.Succeeded),
+                FailedCount: completedOps.Values.Count(op => op.State == OperationState.Failed),
+                CancelledCount: completedOps.Values.Count(op => op.State == OperationState.Cancelled),
                 FailedOperations: failedOperations);
 
             return (succeededResources, summary);
@@ -671,7 +671,7 @@ namespace UtilityMethods
             string resourcePrefix,
             string correlationId,
             int resourceCount,
-            ScheduledActionExecutionParameterDetail executionParameter,
+            BulkActionExecutionConfig executionParameter,
             string rgName,
             string vnetName,
             string subnetName,
@@ -797,7 +797,7 @@ namespace UtilityMethods
             string resourcePrefix,
             string correlationId,
             int resourceCount,
-            ScheduledActionExecutionParameterDetail executionParameter)
+            BulkActionExecutionConfig executionParameter)
         {
             var root = JsonNode.Parse(jsonContent)!;
 
@@ -828,6 +828,34 @@ namespace UtilityMethods
             return new ExecuteCreateContent(payload, executionParameter)
             {
                 CorrelationId = correlationId
+            };
+        }
+
+        public static List<ResourceWithContext> GenerateResourcesWithContext(string subscriptionId, string resourceGroup, string contextPrefix, string vmPrefix, int vmCount)
+        {
+            var resourcesWithContext = new List<ResourceWithContext>();
+
+            for (int i = 0; i < vmCount; i++)
+            {
+                string resourceId = $"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachines/{vmPrefix}-{i}";
+                string context = $"{contextPrefix}-{i}";
+                resourcesWithContext.Add(new ResourceWithContext(new(resourceId), context));
+            }
+
+            return resourcesWithContext;
+        }
+
+        public static ArmClientOptions GetGeneralOptions(string armLocation)
+        {
+            return new ArmClientOptions
+            {
+                Diagnostics =
+                {
+                    IsLoggingContentEnabled = false
+                },
+                Environment = new ArmEnvironment(
+                    new Uri($"https://{armLocation}.management.azure.com"),
+                    "https://management.core.windows.net/")
             };
         }
     }

@@ -8,9 +8,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Azure.ResourceManager.ComputeSchedule" Version="1.2.0-beta.4" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Azure.Identity" Version="1.16.0" />
+		<PackageReference Include="Azure.ResourceManager.ComputeBulkActions" Version="1.0.0-alpha.20260414.1" />
+	</ItemGroup>
 
 
 </Project>

@@ -1,7 +1,7 @@
 using UtilityMethods;
 using Azure.Core;
-using Azure.ResourceManager.ComputeSchedule;
-using Azure.ResourceManager.ComputeSchedule.Models;
+using Azure.ResourceManager.ComputeBulkActions;
+using Azure.ResourceManager.ComputeBulkActions.Models;
 using Azure.ResourceManager.Resources;
 
 namespace OperationFallback;
@@ -22,22 +22,26 @@ public static class HibernateFallbackOnlyNoRetry
     {
         Console.WriteLine("[Scenario] Hibernate with Deallocate fallback (no retries)\n");
 
-        var executionParams = new ScheduledActionExecutionParameterDetail()
+        var executionParams = new BulkActionExecutionConfig()
         {
-            RetryPolicy = new UserRequestRetryPolicy()
+            RetryPolicy = new BulkActionRetryPolicy()
             {
-                OnFailureAction = "Deallocate"
+                OnFailureAction = ResourceOperationType.Deallocate
             }
         };
 
-        var request = new ExecuteHibernateContent(
-            executionParams,
-            new UserRequestResources(resourceIds),
-            Guid.NewGuid().ToString());
+        var resourcesWithContext = resourceIds
+            .Select((id, index) => new ResourceWithContext(id, $"hibernate-fallback-noretry-{index}"))
+            .ToList();
 
-        var result = await subscriptionResource.ExecuteVirtualMachineHibernateAsync(location, request);
+        var request = new ExecuteHibernateContent(executionParams, Guid.NewGuid().ToString())
+        {
+            ResourcesWithContextItems = resourcesWithContext
+        };
 
-        var operationIds = UtilityMethods.HelperMethods.ExcludeResourcesNotProcessed(result.Value.Results).Keys.ToHashSet();
+        var result = await subscriptionResource.VirtualMachinesExecuteHibernateBulkActionAsync(location, request);
+
+        var operationIds = HelperMethods.ExcludeResourcesNotProcessed(result.Value.Results).Keys.ToHashSet();
 
         if (operationIds.Count == 0)
         {
@@ -47,39 +51,35 @@ public static class HibernateFallbackOnlyNoRetry
 
         Console.WriteLine($"[Submit] {operationIds.Count} operation(s) submitted. Polling for results...\n");
         var completedOperations = new Dictionary<string, ResourceOperationDetails>();
-        await UtilityMethods.HelperMethods.PollOperationStatus(operationIds, completedOperations, location, subscriptionResource);
+        await HelperMethods.PollOperationStatus(operationIds, completedOperations, location, subscriptionResource);
 
         foreach (var (opId, details) in completedOperations)
         {
             Console.WriteLine($"[Result] Operation {opId}: State = {details.State}");
 
-            if (details.State == ScheduledActionOperationState.Succeeded)
+            if (details.State == OperationState.Succeeded)
             {
                 Console.WriteLine("[OK] Hibernate succeeded — no fallback needed.");
             }
-            else if (details.State == ScheduledActionOperationState.Failed)
+            else if (details.State == OperationState.Failed)
             {
                 if (details.ResourceOperationError is not null)
                 {
                     Console.WriteLine($"[Error] Primary: {details.ResourceOperationError.ErrorCode} — {details.ResourceOperationError.ErrorDetails}");
                 }
 
-                if (details.FallbackOperationInfo is not null)
+                if (details.FallbackOperation is not null)
                 {
-                    var fallback = details.FallbackOperationInfo;
+                    var fallback = details.FallbackOperation;
                     Console.WriteLine($"[Fallback] {fallback.LastOpType}: Status = {fallback.Status}");
 
-                    if (fallback.Status == ScheduledActionOperationState.Succeeded)
+                    if (fallback.Status == "Succeeded")
                     {
                         Console.WriteLine("[Fallback] [OK] Succeeded — VM was deallocated (no retries attempted).");
                     }
                     else
                     {
                         Console.WriteLine("[Fallback] [FAIL] Failed. Manual intervention may be needed.");
-                        if (fallback.Error is not null)
-                        {
-                            Console.WriteLine($"[Fallback] Error: {fallback.Error.ErrorCode} — {fallback.Error.ErrorDetails}");
-                        }
                     }
                 }
                 else

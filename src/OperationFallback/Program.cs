@@ -3,6 +3,7 @@ using Azure.Identity;
 using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
 using Microsoft.Extensions.Configuration;
+using UtilityMethods;
 
 namespace OperationFallback;
 
@@ -24,12 +25,23 @@ public static class Program
         string subscriptionId = settings["SubscriptionId"] ?? throw new InvalidOperationException("SubscriptionId is required in appsettings.json");
         string resourceGroupName = settings["ResourceGroupName"] ?? throw new InvalidOperationException("ResourceGroupName is required in appsettings.json");
         string location = settings["Location"] ?? throw new InvalidOperationException("Location is required in appsettings.json");
+        // ArmLocation: The ARM location used to target the Scheduledactions endpoint
+        string armLocation = settings["ArmLocation"] ?? throw new InvalidOperationException("ArmLocation is required in appsettings.json");
         var vmNames = settings.GetSection("VmNames").GetChildren().Select(c => c.Value!).ToArray();
         if (vmNames.Length == 0) throw new InvalidOperationException("VmNames is required in appsettings.json");
         string scenario = settings["Scenario"] ?? "HibernateFallback";
 
         TokenCredential cred = new DefaultAzureCredential();
-        ArmClient client = new(cred, subscriptionId);
+
+        // Adding custom headers to the ARM client (optional)
+        var customHeaders = new Dictionary<string, string>
+        {
+            ["x-ms-sa-completion-notification"] = "true",
+        };
+        var clientOptions = HelperMethods.GetGeneralOptions(armLocation);
+        clientOptions.AddPolicy(new SetHeaderPolicy(customHeaders), HttpPipelinePosition.PerCall);
+
+        ArmClient client = new(cred, subscriptionId, clientOptions);
 
         var subscriptionResourceId = SubscriptionResource.CreateResourceIdentifier(subscriptionId);
         var subscriptionResource = client.GetSubscriptionResource(subscriptionResourceId);

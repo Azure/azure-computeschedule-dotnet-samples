@@ -1,7 +1,7 @@
 ﻿using Azure.Core;
 using Azure.Identity;
 using Azure.ResourceManager;
-using Azure.ResourceManager.ComputeSchedule.Models;
+using Azure.ResourceManager.ComputeBulkActions.Models;
 using UtilityMethods;
 
 namespace ExecuteDelete
@@ -15,8 +15,11 @@ namespace ExecuteDelete
             // Location: The location of the virtual machines
             const string location = "eastus2euap";
 
+            // ArmLocation: The ARM location of the virtual machines, in this case, we are using a dummy ARM location
+            var armLocation = "brazilus";
+
             // SubscriptionId: The subscription id under which the virtual machines are located, in this case, we are using a dummy subscriptionId
-            const string subscriptionId = "1d04e8f1-ee04-4056-b0b2-718f5bb45b04";
+            const string subscriptionId = "1b5ca71e-0b7c-4848-8771-d42f6136395e";
 
             // ResourceGroupName: The resource group name under which the virtual machines are located, in this case, we are using a dummy resource group name
             const string resourceGroupName = "computeschedule-azcliext-resources";
@@ -25,31 +28,41 @@ namespace ExecuteDelete
             // Credential: The Azure credential used to authenticate the request
             TokenCredential cred = new DefaultAzureCredential();
 
+            // Adding custom headers to the ARM client (optional)
+            var customHeaders = new Dictionary<string, string>
+            {
+                ["x-ms-sa-completion-notification"] = "true",
+            };
+            var deleteOptions = HelperMethods.GetGeneralOptions(armLocation);
+            deleteOptions.AddPolicy(new SetHeaderPolicy(customHeaders), HttpPipelinePosition.PerCall);
+
             // Client: The Azure Resource Manager client used to interact with the Azure Resource Manager API
-            ArmClient client = new(cred);
+            ArmClient client = new(cred, subscriptionId, deleteOptions);
+
             var subscriptionResource = HelperMethods.GetSubscriptionResource(client, subscriptionId);
 
             // Execution parameters for the request including the retry policy used by Scheduledactions to retry the operation in case of failures
-            var executionParams = new ScheduledActionExecutionParameterDetail()
+            var executionParams = new BulkActionExecutionConfig()
             {
-                RetryPolicy = new UserRequestRetryPolicy()
+                RetryPolicy = new BulkActionRetryPolicy()
                 {
                     // Number of times ScheduledActions should retry the operation in case of failures: Range 0-7
-                    RetryCount = 3,
+                    RetryCount = 0,
                     // Time window in minutes within which ScheduledActions should retry the operation in case of failures: Range in minutes 5-120
-                    RetryWindowInMinutes = 45
+                    RetryWindowInMinutes = 15
                 }
             };
 
-            var resourceIds = new List<ResourceIdentifier>()
+            // List of virtual machines to be deleted, in this case, we are generating 10 virtual machines with the prefix "arm-on" and context prefix "arm-multivm-test"
+            var resourcesWithContext = HelperMethods.GenerateResourcesWithContext(subscriptionId, resourceGroupName, "arm-multivm-test", "arm-on", 10);
+
+            var executeDeleteRequest = new ExecuteDeleteContent(executionParams, Guid.NewGuid().ToString())
             {
-                new($"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/tv0"),
-                new($"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/tv1"),
+                ResourcesWithContextItems = resourcesWithContext
             };
 
-            // Create type operation: Create operation on virtual machines
             await ComputescheduleOperations.ExecuteDeleteOperation(
-                resourceIds,
+                executeDeleteRequest,
                 executionParams,
                 subscriptionResource,
                 blockedOperationsException,
