@@ -20,7 +20,7 @@ namespace ExecuteStart
             var armLocation = "brazilus";
 
             // SubscriptionId: The subscription id under which the virtual machines are located, in this case, we are using a dummy subscriptionId
-            const string subscriptionId = "1d04e8f1-ee04-4056-b0b2-718f5bb45b04";
+            const string subscriptionId = "79587181-e019-480a-a65f-fb525a441cc0";
 
             // ResourceGroupName: The resource group name under which the virtual machines are located, in this case, we are using a dummy resource group name
             const string resourceGroupName = "computeschedule-azcliext-resources";
