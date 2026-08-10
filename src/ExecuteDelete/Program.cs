@@ -22,7 +22,7 @@ namespace ExecuteDelete
             const string subscriptionId = "1b5ca71e-0b7c-4848-8771-d42f6136395e";
 
             // ResourceGroupName: The resource group name under which the virtual machines are located, in this case, we are using a dummy resource group name
-            const string resourceGroupName = "computeschedule-azcliext-resources";
+            const string resourceGroupName = "computebulkactions-azcliext-resources";
 
             Dictionary<string, ComputeBulkOperationDetails> completedOperations = [];
             // Credential: The Azure credential used to authenticate the request

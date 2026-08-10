@@ -23,7 +23,7 @@ namespace ExecuteStart
             const string subscriptionId = "79587181-e019-480a-a65f-fb525a441cc0";
 
             // ResourceGroupName: The resource group name under which the virtual machines are located, in this case, we are using a dummy resource group name
-            const string resourceGroupName = "computeschedule-azcliext-resources";
+            const string resourceGroupName = "computebulkactions-azcliext-resources";
 
             Dictionary<string, ComputeBulkOperationDetails> completedOperations = [];
             // Credential: The Azure credential used to authenticate the request

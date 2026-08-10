@@ -40,7 +40,7 @@ namespace UtilityMethods
               ""resourceConfigParameters"": {
                 ""resourceCount"": 1,
                 ""baseProfile"": {
-                  ""resourcegroupName"": ""computeschedule-azcliext-resources"",
+                  ""resourcegroupName"": ""computebulkactions-azcliext-resources"",
                   ""computeApiVersion"": ""2023-09-01"",
                   ""location"": ""eastus2euap"",
                   ""properties"": {
@@ -105,7 +105,7 @@ namespace UtilityMethods
                                 ""name"": ""vmTest"",
                                 ""properties"": {
                                   ""subnet"": {
-                                    ""id"": ""/subscriptions/38dcfe37-18ca-4560-b49e-4ddcd6423cc5/resourceGroups/computeschedule-azcliext-resources/providers/Microsoft.Network/virtualNetworks/kronox-vnet/subnets/default"",
+                                    ""id"": ""/subscriptions/38dcfe37-18ca-4560-b49e-4ddcd6423cc5/resourceGroups/computebulkactions-azcliext-resources/providers/Microsoft.Network/virtualNetworks/kronox-vnet/subnets/default"",
                                     ""properties"": {
                                       ""defaultoutboundaccess"": false
                                     }

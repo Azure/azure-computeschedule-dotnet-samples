@@ -25,7 +25,7 @@ namespace AllScenarios
             const string subscriptionId = "5f10bcec-dd19-47e0-b1ef-95266fdd23ca";
 
             // ResourceGroupName: The resource group name under which the virtual machines are located, in this case, we are using a dummy resource group name
-            const string resourceGroupName = "computeschedule-azcliext-resources";
+            const string resourceGroupName = "computebulkactions-azcliext-resources";
 
             Dictionary<string, ComputeBulkOperationDetails> completedOperations = [];
             // Credential: The Azure credential used to authenticate the request
