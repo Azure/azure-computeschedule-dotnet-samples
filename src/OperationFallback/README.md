@@ -100,7 +100,7 @@ The fallback action is the **last resort** — it only executes after all retrie
 - **Executed at most once.** The fallback is a one-time, last-resort action. If the fallback itself fails, the operation is marked as failed.
 - **Not retried.** The fallback action is not repeated. If it fails, the entire operation fails.
 - **Ignores the retry window.** The fallback is exempt from the retry window and is always allowed to finish. The total operation duration may extend beyond `retryWindowInMinutes` while the fallback completes.
-- **Original error is preserved.** The response includes both the original error (`resourceOperationError`) and the fallback result (`fallbackOperationInfo`), so you can see what went wrong and whether the fallback recovered.
+- **Original error is preserved.** The response includes both the original error (`error`) and the fallback result (`fallbackOperationInfo`), so you can see what went wrong and whether the fallback recovered.
 
 ### Example: Start with fallback
 
@@ -116,8 +116,7 @@ The fallback action is the **last resort** — it only executes after all retrie
       "retryWindowInMinutes": 120,
       "onFailureAction": "Start"
     }
-  },
-  "correlationId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
 }
 ```
 
@@ -137,8 +136,7 @@ The fallback action is the **last resort** — it only executes after all retrie
       "retryWindowInMinutes": 60,
       "onFailureAction": "Deallocate"
     }
-  },
-  "correlationId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
 }
 ```
 
@@ -215,7 +213,7 @@ In this example:
 }
 ```
 
-In this example, both the primary operation and the fallback failed. The `fallbackOperationInfo` contains the error from the fallback attempt. Note the `lastOpType` field — it tells you the last operation the system attempted, which is useful for understanding what final action was taken on the VM before the failure.
+In this example, both the primary operation and the fallback failed. The `fallbackOperationInfo` contains the error from the fallback attempt. Note the `lastOperationKind` field — it tells you the last operation the system attempted, which is useful for understanding what final action was taken on the VM before the failure.
 
 ---
 
@@ -244,23 +242,23 @@ else if operation.state == "Failed" and operation.fallbackOperationInfo is not N
         # Fallback recovered — VM is in the desired state
     else:
         # Both primary and fallback failed — check errors
-        # operation.resourceOperationError → primary error
+        # operation.error → primary error
         # operation.fallbackOperationInfo.error → fallback error
-        # operation.fallbackOperationInfo.lastOpType → the last operation attempted
+        # operation.fallbackOperationInfo.lastOperationKind → the last operation attempted
 else:
     # Primary operation failed, no fallback was executed
-    # Check operation.resourceOperationError for details
+    # Check operation.error for details
 ```
 
-> **Key takeaway:** When using fallback, do not rely solely on the `state` field. If `state` is `Failed` and you configured an `onFailureAction`, check `fallbackOperationInfo.status` to determine whether the fallback successfully recovered the operation. If the fallback also failed, check `fallbackOperationInfo.lastOpType` to identify the last operation the system attempted on the VM.
+> **Key takeaway:** When using fallback, do not rely solely on the `state` field. If `state` is `Failed` and you configured an `onFailureAction`, check `fallbackOperationInfo.status` to determine whether the fallback successfully recovered the operation. If the fallback also failed, check `fallbackOperationInfo.lastOperationKind` to identify the last operation the system attempted on the VM.
 
 ---
 
 ## .NET SDK Samples
 
-These samples require `Azure.ResourceManager.ComputeSchedule` version **1.2.0-beta.4** or later, which introduces:
-- `UserRequestRetryPolicy` with `OnFailureAction` property
-- `FallbackOperationInfo` on `ResourceOperationDetails` for typed fallback results
+These samples use `Azure.ResourceManager.Compute.BulkActions` version **1.2.0-beta.1**:
+- `BulkOperationRetryPolicy.OnFailureAction` configures the fallback operation.
+- `ComputeBulkOperationDetails.FallbackOperationInfo` exposes typed fallback results.
 
 | File | Description |
 |------|-------------|
@@ -294,7 +292,7 @@ Yes. You can omit `retryWindowInMinutes` (or set it to `0`) and still specify an
 
 **Q: Why did my operation fail without retrying, even though I set a retry policy?**
 
-This typically happens when the error is a **non-retriable** (permanent) error. Non-retriable errors indicate a fundamental issue (e.g., the VM does not exist, invalid configuration, or insufficient permissions) that retrying would not resolve. The system skips retries and fallback entirely for these errors. Check the `resourceOperationError` in the response for the specific error code.
+This typically happens when the error is a **non-retriable** (permanent) error. Non-retriable errors indicate a fundamental issue (e.g., the VM does not exist, invalid configuration, or insufficient permissions) that retrying would not resolve. The system skips retries and fallback entirely for these errors. Check the `error` field in the response for the specific error code.
 
 **Q: My operation took longer than `retryWindowInMinutes` to complete. Is that expected?**
 
@@ -302,7 +300,7 @@ Yes. The retry window controls when new retry attempts can be **initiated**, not
 
 **Q: What happens if the fallback itself fails?**
 
-The operation is marked as failed. The response will include both the original error (in `resourceOperationError`) and the fallback error (in `fallbackOperationInfo`). The fallback is not retried — it is a one-time, last-resort attempt.
+The operation is marked as failed. The response will include both the original error (in `error`) and the fallback error (in `fallbackOperationInfo`). The fallback is not retried — it is a one-time, last-resort attempt.
 
 **Q: Does the fallback count against my retry window?**
 

@@ -148,7 +148,7 @@ src/
 
 All sample projects reference `src/Common`, which contains the shared helper layer used across the repository:
 
-- `ComputescheduleOperations.cs`: common create, start, deallocate, delete, and hibernate operation flows
+- `ComputeBulkActionsOperations.cs`: common create, start, deallocate, delete, and hibernate operation flows
 - `HelperMethods.cs`: resource helpers, request builders, VNet creation, data disk creation, and operation polling
 - `ConsoleProgressRenderer.cs`: single-line progress updates for longer-running flows
 - `SetHeaderPolicy.cs`: example of adding a custom ARM pipeline header policy

@@ -1,8 +1,8 @@
 ﻿using Azure;
 using Azure.Core;
 using Azure.ResourceManager;
-using Azure.ResourceManager.ComputeBulkActions;
-using Azure.ResourceManager.ComputeBulkActions.Models;
+using Azure.ResourceManager.Compute.BulkActions;
+using Azure.ResourceManager.Compute.BulkActions.Models;
 using Azure.ResourceManager.Resources;
 using System.Diagnostics;
 using System.ClientModel.Primitives;
@@ -268,12 +268,12 @@ namespace UtilityMethods
         /// </summary>
         /// <param name="state"></param>
         /// <returns></returns>
-        public static bool IsOperationTerminal(OperationState? state)
+        public static bool IsOperationTerminal(BulkActionOperationState? state)
         {
             return state != null &&
-                (state == OperationState.Succeeded ||
-                state == OperationState.Failed ||
-                state == OperationState.Cancelled);
+                (state == BulkActionOperationState.Succeeded ||
+                state == BulkActionOperationState.Failed ||
+                state == BulkActionOperationState.Cancelled);
         }
 
         /// <summary>
@@ -283,21 +283,21 @@ namespace UtilityMethods
         /// <param name="totalVmsCount">Total number of virtual machines in the initial Start/Hibernate/Deallocate operation </param>
         /// <param name="completedOps"> Dictionary of completed operations, that is, operations where state is either Succeeded, Failed, Cancelled </param>
         /// <returns></returns>
-        public static bool ShouldRetryPolling(GetOperationStatusResult response, int totalVmsCount, Dictionary<string, ResourceOperationDetails> completedOps)
+        public static bool ShouldRetryPolling(GetBulkOperationStatusResult response, int totalVmsCount, Dictionary<string, ComputeBulkOperationDetails> completedOps)
         {
             var shouldRetry = true;
             foreach (var operationResult in response.Results)
             {
                 var operation = operationResult.Operation;
                 var operationId = operation.OperationId;
-                var operationState = operation.State;
-                var operationError = operation.ResourceOperationError;
+                var BulkActionOperationState = operation.State;
+                var operationError = operation.Error;
 
                 Console.WriteLine($"[Polling operation]: {operationId}");
-                if (IsOperationTerminal(operationState))
+                if (IsOperationTerminal(BulkActionOperationState))
                 {
                     completedOps.TryAdd(operationId, operation);
-                    Console.WriteLine($"[Polling operation]: {operationId} completed with state {operationState}");
+                    Console.WriteLine($"[Polling operation]: {operationId} completed with state {BulkActionOperationState}");
 
                     if (operationError != null)
                     {
@@ -321,7 +321,7 @@ namespace UtilityMethods
         /// <param name="completedOps"> Dictionary of completed operations, that is, operations where state is either Succeeded, Failed, Cancelled </param>
         /// <param name="allOps"></param>
         /// <returns></returns>
-        private static HashSet<string?> ExcludeCompletedOperations(Dictionary<string, ResourceOperationDetails> completedOps, HashSet<string> allOps)
+        private static HashSet<string?> ExcludeCompletedOperations(Dictionary<string, ComputeBulkOperationDetails> completedOps, HashSet<string> allOps)
         {
             var incompleteOps = new HashSet<string?>(allOps);
 
@@ -341,7 +341,7 @@ namespace UtilityMethods
         /// </summary>
         /// <param name="results"></param>
         /// <returns></returns>
-        public static Dictionary<string, ResourceIdentifier?> ExcludeResourcesNotProcessed(IEnumerable<BulkActionResourceOperationInfo> results)
+        public static Dictionary<string, ResourceIdentifier?> ExcludeResourcesNotProcessed(IEnumerable<ComputeBulkOperationResult> results)
         {
             var validOperations = new Dictionary<string, ResourceIdentifier?>();
             foreach (var result in results)
@@ -350,9 +350,9 @@ namespace UtilityMethods
                 {
                     Console.WriteLine($"VM with resourceId: {result.ResourceId} encountered the following error: errorCode {result.ErrorCode}, errorDetails: {result.ErrorDetails}");
                 }
-                else if (result.Operation.State == OperationState.Blocked)
+                else if (result.Operation.State == BulkActionOperationState.Blocked)
                 {
-                    /// Operations on virtual machines are set to blocked state in Computeschedule when there is an ongoing outage internally or in downstream services.
+                    /// Operations on virtual machines are set to blocked state in ComputeBulkActions when there is an ongoing outage internally or in downstream services.
                     /// These operations could still be processed later as long as their due time for execution is not past deadline time + retrywindowinminutes
                     Console.WriteLine($"Operation on VM with resourceId: {result.ResourceId} is currently blocked, operation may still complete");
                 }
@@ -374,13 +374,13 @@ namespace UtilityMethods
         /// <param name="resource"> ARM subscription resource </param>
         /// <returns></returns>
 
-        public static async Task<Dictionary<string, ResourceIdentifier>> PollOperationStatus(HashSet<string> opIdsFromOperationReq, Dictionary<string, ResourceOperationDetails> completedOps, string location, SubscriptionResource resource)
+        public static async Task<Dictionary<string, ResourceIdentifier>> PollOperationStatus(HashSet<string> opIdsFromOperationReq, Dictionary<string, ComputeBulkOperationDetails> completedOps, string location, ResourceGroupResource resource)
         {
             // This value controls the initial wait time before the first polling call is made
             await Task.Delay(s_initialWaitTimeBeforePollingInSeconds);
 
-            GetOperationStatusContent getOpsStatusRequest = new(opIdsFromOperationReq, Guid.NewGuid().ToString());
-            GetOperationStatusResult? response = await resource.VirtualMachinesGetOperationStatusBulkActionAsync(location, getOpsStatusRequest);
+            GetBulkOperationStatusContent getOpsStatusRequest = new(opIdsFromOperationReq);
+            GetBulkOperationStatusResult response = (await resource.BulkGetOperationsStatusAsync(location, getOpsStatusRequest)).Value;
 
             var opIdsToResourceIds = new Dictionary<string, ResourceIdentifier>();
 
@@ -392,15 +392,15 @@ namespace UtilityMethods
                 if (!ShouldRetryPolling(response, opIdsFromOperationReq.Count, completedOps))
                 {
                     opIdsToResourceIds = response.Results.ToDictionary(x => x.Operation.OperationId, x => x.ResourceId);
-                    GetOperationStatusResult? allOpsStatus = await resource.VirtualMachinesGetOperationStatusBulkActionAsync(location, new(opIdsFromOperationReq, Guid.NewGuid().ToString()));
+                    GetBulkOperationStatusResult allOpsStatus = (await resource.BulkGetOperationsStatusAsync(location, new(opIdsFromOperationReq))).Value;
                     Console.WriteLine(ModelReaderWriter.Write(allOpsStatus, ModelReaderWriterOptions.Json).ToString());
                     break;
                 }
                 else
                 {
                     var incompleteOperations = ExcludeCompletedOperations(completedOps, opIdsFromOperationReq);
-                    GetOperationStatusContent pendingOpIds = new(incompleteOperations, Guid.NewGuid().ToString());
-                    response = await resource.VirtualMachinesGetOperationStatusBulkActionAsync(location, pendingOpIds);
+                    GetBulkOperationStatusContent pendingOpIds = new(incompleteOperations);
+                    response = (await resource.BulkGetOperationsStatusAsync(location, pendingOpIds)).Value;
                 }
 
                 // This value controls the interval between each poll call
@@ -415,19 +415,19 @@ namespace UtilityMethods
         /// </summary>
         public static async Task<(Dictionary<string, ResourceIdentifier> SucceededResources, FlexPollingSummary Summary)> PollOperationStatusForFlex(
             HashSet<string> opIdsFromOperationReq,
-            Dictionary<string, ResourceOperationDetails> completedOps,
+            Dictionary<string, ComputeBulkOperationDetails> completedOps,
             Dictionary<string, ResourceIdentifier?> opIdsToResourceIds,
             string location,
-            SubscriptionResource resource,
+            ResourceGroupResource resource,
             bool renderProgress = true,
             Action<FlexPollingProgress>? onProgress = null)
         {
             var stopwatch = Stopwatch.StartNew();
             await Task.Delay(TimeSpan.FromSeconds(s_initialWaitTimeBeforePollingInSeconds));
 
-            GetOperationStatusResult? response = await resource.VirtualMachinesGetOperationStatusBulkActionAsync(
+            GetBulkOperationStatusResult response = (await resource.BulkGetOperationsStatusAsync(
                 location,
-                new GetOperationStatusContent(opIdsFromOperationReq, Guid.NewGuid().ToString()));
+                new GetBulkOperationStatusContent(opIdsFromOperationReq))).Value;
 
             using CancellationTokenSource cts = new(TimeSpan.FromMinutes(s_operationTimeoutInMinutes));
             var lastProgressLength = 0;
@@ -443,9 +443,9 @@ namespace UtilityMethods
                     }
                 }
 
-                var succeededCount = completedOps.Values.Count(op => op.State == OperationState.Succeeded);
-                var failedCount = completedOps.Values.Count(op => op.State == OperationState.Failed);
-                var cancelledCount = completedOps.Values.Count(op => op.State == OperationState.Cancelled);
+                var succeededCount = completedOps.Values.Count(op => op.State == BulkActionOperationState.Succeeded);
+                var failedCount = completedOps.Values.Count(op => op.State == BulkActionOperationState.Failed);
+                var cancelledCount = completedOps.Values.Count(op => op.State == BulkActionOperationState.Cancelled);
                 var completedCount = completedOps.Count;
                 var inProgressCount = opIdsFromOperationReq.Count - completedCount;
                 var elapsed = stopwatch.Elapsed;
@@ -496,9 +496,9 @@ namespace UtilityMethods
                     break;
                 }
 
-                response = await resource.VirtualMachinesGetOperationStatusBulkActionAsync(
+                response = (await resource.BulkGetOperationsStatusAsync(
                     location,
-                    new GetOperationStatusContent(incompleteOperations, Guid.NewGuid().ToString()));
+                    new GetBulkOperationStatusContent(incompleteOperations))).Value;
             }
 
             stopwatch.Stop();
@@ -508,7 +508,7 @@ namespace UtilityMethods
             }
 
             var succeededResources = completedOps
-                .Where(kvp => kvp.Value.State == OperationState.Succeeded)
+                .Where(kvp => kvp.Value.State == BulkActionOperationState.Succeeded)
                 .Select(kvp =>
                 {
                     opIdsToResourceIds.TryGetValue(kvp.Key, out var resourceId);
@@ -518,11 +518,11 @@ namespace UtilityMethods
                 .ToDictionary(item => item.Key, item => item.ResourceId!);
 
             var failedOperations = completedOps
-                .Where(kvp => kvp.Value.State == OperationState.Failed || kvp.Value.State == OperationState.Cancelled)
+                .Where(kvp => kvp.Value.State == BulkActionOperationState.Failed || kvp.Value.State == BulkActionOperationState.Cancelled)
                 .Select(kvp =>
                 {
                     opIdsToResourceIds.TryGetValue(kvp.Key, out var resourceId);
-                    var error = kvp.Value.ResourceOperationError;
+                    var error = kvp.Value.Error;
                     return new FailedVmOperation(
                         kvp.Key,
                         resourceId?.ToString() ?? "unknown-resource",
@@ -535,9 +535,9 @@ namespace UtilityMethods
             var summary = new FlexPollingSummary(
                 ValidCount: opIdsFromOperationReq.Count,
                 CompletedCount: completedOps.Count,
-                SucceededCount: completedOps.Values.Count(op => op.State == OperationState.Succeeded),
-                FailedCount: completedOps.Values.Count(op => op.State == OperationState.Failed),
-                CancelledCount: completedOps.Values.Count(op => op.State == OperationState.Cancelled),
+                SucceededCount: completedOps.Values.Count(op => op.State == BulkActionOperationState.Succeeded),
+                FailedCount: completedOps.Values.Count(op => op.State == BulkActionOperationState.Failed),
+                CancelledCount: completedOps.Values.Count(op => op.State == BulkActionOperationState.Cancelled),
                 FailedOperations: failedOperations);
 
             return (succeededResources, summary);
@@ -587,7 +587,7 @@ namespace UtilityMethods
 
         /// <summary>
         /// Generates a resource override item for virtual machines.
-        /// Computeschedule allows customers override certain properties of the base profile for each resource created.
+        /// ComputeBulkActions allows customers override certain properties of the base profile for each resource created.
         /// </summary>
         /// <param name="name">Name of the virtual machine</param>
         /// <param name="locationProperty">Location of the virtual machine</param>
@@ -671,7 +671,7 @@ namespace UtilityMethods
             string resourcePrefix,
             string correlationId,
             int resourceCount,
-            BulkActionExecutionConfig executionParameter,
+            BulkActionExecutionParameterDetail executionParameter,
             string rgName,
             string vnetName,
             string subnetName,
@@ -777,10 +777,7 @@ namespace UtilityMethods
                 }
             }
 
-            return new ExecuteCreateContent(payload, executionParameter)
-            {
-                CorrelationId = correlationId
-            };
+            return new ExecuteCreateContent(payload, executionParameter);
         }
 
 
@@ -797,7 +794,7 @@ namespace UtilityMethods
             string resourcePrefix,
             string correlationId,
             int resourceCount,
-            BulkActionExecutionConfig executionParameter)
+            BulkActionExecutionParameterDetail executionParameter)
         {
             var root = JsonNode.Parse(jsonContent)!;
 
@@ -825,13 +822,10 @@ namespace UtilityMethods
                 payload.ResourceOverrides.Add(overrideDict);
             }
 
-            return new ExecuteCreateContent(payload, executionParameter)
-            {
-                CorrelationId = correlationId
-            };
+            return new ExecuteCreateContent(payload, executionParameter);
         }
 
-        public static List<ResourceWithContext> GenerateResourcesWithContext(string subscriptionId, string resourceGroup, string contextPrefix, string vmPrefix, int vmCount)
+        public static ResourcesWithContext GenerateResourcesWithContext(string subscriptionId, string resourceGroup, string contextPrefix, string vmPrefix, int vmCount)
         {
             var resourcesWithContext = new List<ResourceWithContext>();
 
@@ -842,7 +836,7 @@ namespace UtilityMethods
                 resourcesWithContext.Add(new ResourceWithContext(new(resourceId), context));
             }
 
-            return resourcesWithContext;
+            return new ResourcesWithContext(resourcesWithContext);
         }
 
         public static ArmClientOptions GetGeneralOptions(string armLocation)

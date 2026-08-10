@@ -31,7 +31,7 @@ internal static class ExecuteVDICreateFlexApiDemo
         var createFlexRequest = BuildCreateFlexRequest(sampleContext, subnetId, requestBuilder, logger);
 
         var createFlexResult = await SubmitCreateFlexRequestAsync(sampleContext, subscriptionResource, createFlexRequest, logger);
-        await PollAndReportAsync(sampleContext, subscriptionResource, createFlexResult, logger);
+        await PollAndReportAsync(sampleContext, resourceGroupResource, createFlexResult, logger);
     }
 
     private sealed record ApiSampleContext(
@@ -110,7 +110,7 @@ internal static class ExecuteVDICreateFlexApiDemo
 
     private static async Task<ScheduledActionCreateFlexResult> SubmitCreateFlexRequestAsync(
         ApiSampleContext context,
-        SubscriptionResource subscriptionResource,
+        ResourceGroupResource resourceGroupResource,
         ExecuteCreateFlexContent createFlexRequest,
         FlexRunLogger logger)
     {
@@ -131,7 +131,7 @@ internal static class ExecuteVDICreateFlexApiDemo
         FlexRunLogger logger)
     {
         var validOps = HelperMethods.ExcludeResourcesNotProcessed(createFlexResult.Results);
-        var completedOperations = new Dictionary<string, ResourceOperationDetails>();
+        var completedOperations = new Dictionary<string, ComputeBulkOperationDetails>();
         Console.WriteLine($"Valid operations to poll: {validOps.Count}.");
         logger.Info($"Valid operations to poll: {validOps.Count}.");
 
@@ -143,7 +143,7 @@ internal static class ExecuteVDICreateFlexApiDemo
         }
 
         logger.Info($"Polling operation IDs: {string.Join(", ", validOps.Keys)}");
-        await HelperMethods.PollOperationStatus([.. validOps.Keys], completedOperations, context.Location, subscriptionResource);
+        await HelperMethods.PollOperationStatus([.. validOps.Keys], completedOperations, context.Location, resourceGroupResource);
 
         var completedCount = completedOperations.Count;
         var succeededCount = completedOperations.Values.Count(op => op.State == ScheduledActionOperationState.Succeeded);

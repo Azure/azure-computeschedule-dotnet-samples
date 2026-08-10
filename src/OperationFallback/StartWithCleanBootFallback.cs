@@ -1,7 +1,7 @@
 using UtilityMethods;
 using Azure.Core;
-using Azure.ResourceManager.ComputeBulkActions;
-using Azure.ResourceManager.ComputeBulkActions.Models;
+using Azure.ResourceManager.Compute.BulkActions;
+using Azure.ResourceManager.Compute.BulkActions.Models;
 using Azure.ResourceManager.Resources;
 
 namespace OperationFallback;
@@ -19,18 +19,18 @@ namespace OperationFallback;
 public static class StartWithCleanBootFallback
 {
     public static async Task RunAsync(
-        SubscriptionResource subscriptionResource,
+        ResourceGroupResource resourceGroupResource,
         List<ResourceIdentifier> resourceIds,
         string location)
     {
         Console.WriteLine("[Scenario] Start with clean-boot fallback\n");
 
-        var executionParams = new BulkActionExecutionConfig()
+        var executionParams = new BulkActionExecutionParameterDetail()
         {
-            RetryPolicy = new BulkActionRetryPolicy()
+            RetryPolicy = new BulkOperationRetryPolicy()
             {
                 RetryWindowInMinutes = 30,
-                OnFailureAction = ResourceOperationType.Start
+                OnFailureAction = ComputeBulkOperationKind.Start
             }
         };
 
@@ -38,14 +38,14 @@ public static class StartWithCleanBootFallback
             .Select((id, index) => new ResourceWithContext(id, $"start-fallback-{index}"))
             .ToList();
 
-        var request = new ExecuteStartContent(executionParams, Guid.NewGuid().ToString())
+        var request = new ExecuteStartContent(executionParams)
         {
-            ResourcesWithContextItems = resourcesWithContext
+            ResourcesWithContext = new ResourcesWithContext(resourcesWithContext)
         };
 
-        var result = await subscriptionResource.VirtualMachinesExecuteStartBulkActionAsync(location, request);
+        var result = (await resourceGroupResource.BulkStartOperationAsync(location, request)).Value;
 
-        var operationIds = UtilityMethods.HelperMethods.ExcludeResourcesNotProcessed(result.Value.Results).Keys.ToHashSet();
+        var operationIds = UtilityMethods.HelperMethods.ExcludeResourcesNotProcessed(result.Results).Keys.ToHashSet();
 
         if (operationIds.Count == 0)
         {
@@ -54,28 +54,28 @@ public static class StartWithCleanBootFallback
         }
 
         Console.WriteLine($"[Submit] {operationIds.Count} operation(s) submitted. Polling for results...\n");
-        var completedOperations = new Dictionary<string, ResourceOperationDetails>();
-        await UtilityMethods.HelperMethods.PollOperationStatus(operationIds, completedOperations, location, subscriptionResource);
+        var completedOperations = new Dictionary<string, ComputeBulkOperationDetails>();
+        await UtilityMethods.HelperMethods.PollOperationStatus(operationIds, completedOperations, location, resourceGroupResource);
 
         foreach (var (opId, details) in completedOperations)
         {
             Console.WriteLine($"[Result] Operation {opId}: State = {details.State}");
 
-            if (details.State == OperationState.Succeeded)
+            if (details.State == BulkActionOperationState.Succeeded)
             {
                 Console.WriteLine("[OK] Start (resume) succeeded — no fallback needed.");
             }
-            else if (details.State == OperationState.Failed)
+            else if (details.State == BulkActionOperationState.Failed)
             {
-                if (details.ResourceOperationError is not null)
+                if (details.Error is not null)
                 {
-                    Console.WriteLine($"[Error] Primary: {details.ResourceOperationError.ErrorCode} — {details.ResourceOperationError.ErrorDetails}");
+                    Console.WriteLine($"[Error] Primary: {details.Error.ErrorCode} — {details.Error.ErrorDetails}");
                 }
 
-                if (details.FallbackOperation is not null)
+                if (details.FallbackOperationInfo is not null)
                 {
-                    var fallback = details.FallbackOperation;
-                    Console.WriteLine($"[Fallback] {fallback.LastOpType}: Status = {fallback.Status}");
+                    var fallback = details.FallbackOperationInfo;
+                    Console.WriteLine($"[Fallback] {fallback.LastOperationKind}: Status = {fallback.Status}");
 
                     if (fallback.Status == "Succeeded")
                     {

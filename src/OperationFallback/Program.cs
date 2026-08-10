@@ -53,19 +53,22 @@ public static class Program
         switch (scenario)
         {
             case "HibernateFallback":
-                await HibernateWithDeallocateFallback.RunAsync(subscriptionResource, resourceIds, location);
+                var hibernateResourceGroup = (await subscriptionResource.GetResourceGroupAsync(resourceGroupName)).Value;
+                await HibernateWithDeallocateFallback.RunAsync(hibernateResourceGroup, resourceIds, location);
                 break;
             case "StartFallback":
-                await StartWithCleanBootFallback.RunAsync(subscriptionResource, resourceIds, location);
+                var startResourceGroup = (await subscriptionResource.GetResourceGroupAsync(resourceGroupName)).Value;
+                await StartWithCleanBootFallback.RunAsync(startResourceGroup, resourceIds, location);
                 break;
             case "HibernateFallbackNoRetry":
-                await HibernateFallbackOnlyNoRetry.RunAsync(subscriptionResource, resourceIds, location);
+                var noRetryResourceGroup = (await subscriptionResource.GetResourceGroupAsync(resourceGroupName)).Value;
+                await HibernateFallbackOnlyNoRetry.RunAsync(noRetryResourceGroup, resourceIds, location);
                 break;
             case "CreateFallback":
                 var createSettings = config.GetSection("Settings:Create");
                 string adminUsername = createSettings["AdminUsername"] ?? throw new InvalidOperationException("Settings:Create:AdminUsername is required in appsettings.json");
                 string adminPassword = createSettings["AdminPassword"] ?? throw new InvalidOperationException("Settings:Create:AdminPassword is required in appsettings.json");
-                await CreateWithDeleteFallback.RunAsync(subscriptionResource, location, subscriptionId, resourceGroupName, adminUsername, adminPassword);
+                await CreateWithDeleteFallback.RunAsync(location, subscriptionId, resourceGroupName, adminUsername, adminPassword);
                 break;
             default:
                 Console.WriteLine($"Unknown scenario: {scenario}");

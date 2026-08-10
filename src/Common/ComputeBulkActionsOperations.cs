@@ -1,20 +1,20 @@
 ﻿using Azure;
 using Azure.Core;
-using Azure.ResourceManager.ComputeBulkActions;
-using Azure.ResourceManager.ComputeBulkActions.Models;
+using Azure.ResourceManager.Compute.BulkActions;
+using Azure.ResourceManager.Compute.BulkActions.Models;
 using Azure.ResourceManager.Resources;
 using System.ClientModel.Primitives;
 
 namespace UtilityMethods
 {
-    public static class ComputescheduleOperations
+    public static class ComputeBulkActionsOperations
     {
         /// <summary>
         /// This method details the happy path for executing a create type operation in ScheduledActions
         /// </summary>
         /// <param name="completedOperations">Hashset of completed operations to track</param>
         /// <param name="executionParameterDetail">Execution parameters for the request</param>
-        /// <param name="subscriptionResource">Subscription resource with Computeschedule operations</param>
+        /// <param name="resourceGroupResource">Resource group containing the target virtual machines</param>
         /// <param name="subscriptionId">SubscriptionId for request</param>
         /// <param name="blockedOperationsException">Exceptions representing blocked operations</param>
         /// <param name="location">Location of the virtual machines operation</param>
@@ -24,9 +24,9 @@ namespace UtilityMethods
         /// <param name="includeOverrides">Whether to include resource overrides in the request</param>
         /// <param name="resourceOverrideDetails">The resource override details to apply while creating the virtual machines</param>
         public static async Task<Dictionary<string, ResourceIdentifier>> ExecuteCreateOperation(
-            Dictionary<string, ResourceOperationDetails> completedOperations,
-            BulkActionExecutionConfig executionParameterDetail,
-            SubscriptionResource subscriptionResource,
+            Dictionary<string, ComputeBulkOperationDetails> completedOperations,
+            BulkActionExecutionParameterDetail executionParameterDetail,
+            ResourceGroupResource resourceGroupResource,
             HashSet<string> blockedOperationsException,
             List<Dictionary<string, BinaryData>> resourceOverrideDetails,
             int vmCount,
@@ -63,11 +63,11 @@ namespace UtilityMethods
             try
             {
                 // Execute the create operation
-                CreateResourceOperationResult? result = await subscriptionResource.VirtualMachinesExecuteCreateBulkActionAsync(location, executecreatecontent);
+                CreateResourceOperationResult result = (await resourceGroupResource.BulkCreateOperationAsync(location, executecreatecontent)).Value;
 
                 /// <summary>
-                /// Each operationId corresponds to a virtual machine operation in ScheduledActions. 
-                /// The method below excludes resources that have not been processed in ScheduledActions due to a number of reasons 
+                /// Each operationId corresponds to a virtual machine operation in ScheduledActions.
+                /// The method below excludes resources that have not been processed in ScheduledActions due to a number of reasons
                 /// like operation conflicts, virtual machines not being found in an Azure location etc 
                 /// and returns only the valid operations that have passed validation checks to be polled.
                 /// </summary>
@@ -76,7 +76,7 @@ namespace UtilityMethods
 
                 if (validOps.Count > 0)
                 {
-                    allCreatedVms = await HelperMethods.PollOperationStatus([.. validOps.Keys], completedOperations, location, subscriptionResource);
+                    allCreatedVms = await HelperMethods.PollOperationStatus([.. validOps.Keys], completedOperations, location, resourceGroupResource);
                 }
                 else
                 {
@@ -94,7 +94,7 @@ namespace UtilityMethods
                 /// - Over 100 resourceids provided in request
                 /// - RetryPolicy.RetryCount value > 7
                 /// - RetryPolicy.RetryWindowInMinutes value > 120
-                /// COMPUTESCHEDULE BLOCKING ERRORS:
+                /// COMPUTEBULKACTIONS BLOCKING ERRORS:
                 /// - Scheduling Operations Blocked due to an ongoing outage in downstream services
                 /// - Non-Scheduling Operations Blocked, eg VirtualMachinesGetOperationStatus operations, due to an ongoing outage in downstream services
                 /// </summary>
@@ -120,14 +120,14 @@ namespace UtilityMethods
         /// </summary>
         /// <param name="executedeletecontent">The content for the delete operation</param>
         /// <param name="executionParameterDetail">Execution parameters for the request</param>
-        /// <param name="subscriptionResource">Subscription resource with Computeschedule operations</param>
+        /// <param name="resourceGroupResource">Resource group containing the target virtual machines</param>
         /// <param name="blockedOperationsException">Exceptions representing blocked operations</param>
         /// <param name="location">Location of the virtual machines operation</param>
         /// <param name="isForceDeletion">Indicates if the deletion is forced</param>
         public static async Task ExecuteDeleteOperation(
             ExecuteDeleteContent executedeletecontent,
-            BulkActionExecutionConfig executionParameterDetail,
-            SubscriptionResource subscriptionResource,
+            BulkActionExecutionParameterDetail executionParameterDetail,
+            ResourceGroupResource resourceGroupResource,
             HashSet<string> blockedOperationsException,
             string location,
             bool isForceDeletion)
@@ -138,11 +138,11 @@ namespace UtilityMethods
             try
             {
                 // Execute the delete operation
-                DeleteResourceOperationResult? result = await subscriptionResource.VirtualMachinesExecuteDeleteBulkActionAsync(location, executedeletecontent);
-                Dictionary<string, ResourceOperationDetails> completedOperations = [];
+                DeleteResourceOperationResult result = (await resourceGroupResource.BulkDeleteOperationAsync(location, executedeletecontent)).Value;
+                Dictionary<string, ComputeBulkOperationDetails> completedOperations = [];
                 /// <summary>
-                /// Each operationId corresponds to a virtual machine operation in ScheduledActions. 
-                /// The method below excludes resources that have not been processed in ScheduledActions due to a number of reasons 
+                /// Each operationId corresponds to a virtual machine operation in ScheduledActions.
+                /// The method below excludes resources that have not been processed in ScheduledActions due to a number of reasons
                 /// like operation conflicts, virtual machines not being found in an Azure location etc 
                 /// and returns only the valid operations that have passed validation checks to be polled.
                 /// </summary>
@@ -150,7 +150,7 @@ namespace UtilityMethods
 
                 if (validOperationIds.Count > 0)
                 {
-                    await HelperMethods.PollOperationStatus(validOperationIds, completedOperations, location, subscriptionResource);
+                    await HelperMethods.PollOperationStatus(validOperationIds, completedOperations, location, resourceGroupResource);
                 }
                 else
                 {
@@ -167,7 +167,7 @@ namespace UtilityMethods
                 /// - Over 100 resourceids provided in request
                 /// - RetryPolicy.RetryCount value > 7
                 /// - RetryPolicy.RetryWindowInMinutes value > 120
-                /// COMPUTESCHEDULE BLOCKING ERRORS:
+                /// COMPUTEBULKACTIONS BLOCKING ERRORS:
                 /// - Scheduling Operations Blocked due to an ongoing outage in downstream services
                 /// - Non-Scheduling Operations Blocked, eg VirtualMachinesGetOperationStatus operations, due to an ongoing outage in downstream services
                 /// </summary>
@@ -192,26 +192,26 @@ namespace UtilityMethods
         /// </summary>
         /// <param name="completedOperations">Hashset of completed operations to track</param>
         /// <param name="executionParameterDetail">Execution parameters for the request</param>
-        /// <param name="subscriptionResource">Subscription resource with Computeschedule operations</param>
+        /// <param name="resourceGroupResource">Resource group containing the target virtual machines</param>
         /// <param name="blockedOperationsException">Exceptions representing blocked operations</param>
         /// <param name="location">Location of the virtual machines operation</param>
         /// <param name="executeStartContent">The content for the start operation</param>
         /// <returns></returns>
         public static async Task ExecuteStartOperation(
-            Dictionary<string, ResourceOperationDetails> completedOperations,
-            BulkActionExecutionConfig executionParameterDetail,
-            SubscriptionResource subscriptionResource,
+            Dictionary<string, ComputeBulkOperationDetails> completedOperations,
+            BulkActionExecutionParameterDetail executionParameterDetail,
+            ResourceGroupResource resourceGroupResource,
             HashSet<string> blockedOperationsException,
             ExecuteStartContent executeStartContent,
             string location)
         {
             try
             {
-                StartResourceOperationResult? result = await subscriptionResource.VirtualMachinesExecuteStartBulkActionAsync(location, executeStartContent);
+                StartResourceOperationResult result = (await resourceGroupResource.BulkStartOperationAsync(location, executeStartContent)).Value;
 
                 /// <summary>
-                /// Each operationId corresponds to a virtual machine operation in ScheduledActions. 
-                /// The method below excludes resources that have not been processed in ScheduledActions due to a number of reasons 
+                /// Each operationId corresponds to a virtual machine operation in ScheduledActions.
+                /// The method below excludes resources that have not been processed in ScheduledActions due to a number of reasons
                 /// like operation conflicts, virtual machines not being found in an Azure location etc 
                 /// and returns only the valid operations that have passed validation checks to be polled.
                 /// </summary>
@@ -220,7 +220,7 @@ namespace UtilityMethods
 
                 if (validOperationIds.Count > 0)
                 {
-                    await HelperMethods.PollOperationStatus(validOperationIds, completedOperations, location, subscriptionResource);
+                    await HelperMethods.PollOperationStatus(validOperationIds, completedOperations, location, resourceGroupResource);
                 }
                 else
                 {
@@ -237,7 +237,7 @@ namespace UtilityMethods
                 /// - Over 100 resourceids provided in request
                 /// - RetryPolicy.RetryCount value > 7
                 /// - RetryPolicy.RetryWindowInMinutes value > 120
-                /// COMPUTESCHEDULE BLOCKING ERRORS:
+                /// COMPUTEBULKACTIONS BLOCKING ERRORS:
                 /// - Scheduling Operations Blocked due to an ongoing outage in downstream services
                 /// - Non-Scheduling Operations Blocked, eg VirtualMachinesGetOperationStatus operations, due to an ongoing outage in downstream services
                 /// </summary>
@@ -262,15 +262,15 @@ namespace UtilityMethods
         /// </summary>
         /// <param name="completedOperations">Hashset of completed operations to track</param>
         /// <param name="executionParameterDetail">Execution parameters for the request</param>
-        /// <param name="subscriptionResource">Subscription resource with Computeschedule operations</param>
+        /// <param name="resourceGroupResource">Resource group containing the target virtual machines</param>
         /// <param name="blockedOperationsException">Exceptions representing blocked operations</param>
         /// <param name="location">Location of the virtual machines operation</param>
         /// <param name="executeDeallocateContent">Content for the execute deallocate operation</param>
         /// <returns></returns>
         public static async Task ExecuteDeallocateOperation(
-            Dictionary<string, ResourceOperationDetails> completedOperations,
-            BulkActionExecutionConfig executionParameterDetail,
-            SubscriptionResource subscriptionResource,
+            Dictionary<string, ComputeBulkOperationDetails> completedOperations,
+            BulkActionExecutionParameterDetail executionParameterDetail,
+            ResourceGroupResource resourceGroupResource,
             HashSet<string> blockedOperationsException,
             ExecuteDeallocateContent executeDeallocateContent,
             string location)
@@ -280,11 +280,11 @@ namespace UtilityMethods
                 // CorrelationId: This is a unique identifier used internally to track and monitor operations in ScheduledActions
                 var correlationId = Guid.NewGuid().ToString();
 
-                DeallocateResourceOperationResult? result = await subscriptionResource.VirtualMachinesExecuteDeallocateBulkActionAsync(location, executeDeallocateContent);
+                DeallocateResourceOperationResult result = (await resourceGroupResource.BulkDeallocateOperationAsync(location, executeDeallocateContent)).Value;
 
                 /// <summary>
-                /// Each operationId corresponds to a virtual machine operation in ScheduledActions. 
-                /// The method below excludes resources that have not been processed in ScheduledActions due to a number of reasons 
+                /// Each operationId corresponds to a virtual machine operation in ScheduledActions.
+                /// The method below excludes resources that have not been processed in ScheduledActions due to a number of reasons
                 /// like operation conflicts, virtual machines not being found in an Azure location etc 
                 /// and returns only the valid operations that have passed validation checks to be polled.
                 /// </summary>
@@ -293,7 +293,7 @@ namespace UtilityMethods
 
                 if (validOperationIds.Count > 0)
                 {
-                    await HelperMethods.PollOperationStatus(validOperationIds, completedOperations, location, subscriptionResource);
+                    await HelperMethods.PollOperationStatus(validOperationIds, completedOperations, location, resourceGroupResource);
                 }
                 else
                 {
@@ -310,7 +310,7 @@ namespace UtilityMethods
                 /// - Over 100 resourceids provided in request
                 /// - RetryPolicy.RetryCount value > 7
                 /// - RetryPolicy.RetryWindowInMinutes value > 120
-                /// COMPUTESCHEDULE BLOCKING ERRORS:
+                /// COMPUTEBULKACTIONS BLOCKING ERRORS:
                 /// - Scheduling Operations Blocked due to an ongoing outage in downstream services
                 /// - Non-Scheduling Operations Blocked, eg VirtualMachinesGetOperationStatus operations, due to an ongoing outage in downstream services
                 /// </summary>
@@ -335,26 +335,26 @@ namespace UtilityMethods
         /// </summary>
         /// <param name="completedOperations">Hashset of completed operations to track</param>
         /// <param name="executionParameterDetail">Execution parameters for the request</param>
-        /// <param name="subscriptionResource">Subscription resource with Computeschedule operations</param>
+        /// <param name="resourceGroupResource">Resource group containing the target virtual machines</param>
         /// <param name="blockedOperationsException">Exceptions representing blocked operations</param>
         /// <param name="location">Location of the virtual machines operation</param>
         /// <param name="executeHibernateRequest">The content for the hibernate operation</param>
         /// <returns></returns>
         public static async Task ExecuteHibernateOperation(
-            Dictionary<string, ResourceOperationDetails> completedOperations,
-            BulkActionExecutionConfig executionParameterDetail,
-            SubscriptionResource subscriptionResource,
+            Dictionary<string, ComputeBulkOperationDetails> completedOperations,
+            BulkActionExecutionParameterDetail executionParameterDetail,
+            ResourceGroupResource resourceGroupResource,
             HashSet<string> blockedOperationsException,
             ExecuteHibernateContent executeHibernateRequest,
             string location)
         {
             try
             {
-                HibernateResourceOperationResult? result = await subscriptionResource.VirtualMachinesExecuteHibernateBulkActionAsync(location, executeHibernateRequest);
+                HibernateResourceOperationResult result = (await resourceGroupResource.BulkHibernateOperationAsync(location, executeHibernateRequest)).Value;
 
                 /// <summary>
-                /// Each operationId corresponds to a virtual machine operation in ScheduledActions. 
-                /// The method below excludes resources that have not been processed in ScheduledActions due to a number of reasons 
+                /// Each operationId corresponds to a virtual machine operation in ScheduledActions.
+                /// The method below excludes resources that have not been processed in ScheduledActions due to a number of reasons
                 /// like operation conflicts, virtual machines not being found in an Azure location etc 
                 /// and returns only the valid operations that have passed validation checks to be polled.
                 /// </summary>
@@ -363,7 +363,7 @@ namespace UtilityMethods
 
                 if (validOperationIds.Count > 0)
                 {
-                    await HelperMethods.PollOperationStatus(validOperationIds, completedOperations, location, subscriptionResource);
+                    await HelperMethods.PollOperationStatus(validOperationIds, completedOperations, location, resourceGroupResource);
                 }
                 else
                 {
@@ -380,7 +380,7 @@ namespace UtilityMethods
                 /// - Over 100 resourceids provided in request
                 /// - RetryPolicy.RetryCount value > 7
                 /// - RetryPolicy.RetryWindowInMinutes value > 120
-                /// COMPUTESCHEDULE BLOCKING ERRORS:
+                /// COMPUTEBULKACTIONS BLOCKING ERRORS:
                 /// - Scheduling Operations Blocked due to an ongoing outage in downstream services
                 /// - Non-Scheduling Operations Blocked, eg VirtualMachinesGetOperationStatus operations, due to an ongoing outage in downstream services
                 /// </summary>
