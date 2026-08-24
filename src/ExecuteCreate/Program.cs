@@ -39,7 +39,7 @@ namespace ExecuteCreate
             // Client: The Azure Resource Manager client used to interact with the Azure Resource Manager API
             ArmClient client = new(cred, subscriptionId, createOptions);
             var subscriptionResource = HelperMethods.GetSubscriptionResource(client, subscriptionId);
-            var resourceGroupResource = await subscriptionResource.GetResourceGroupAsync(resourceGroupName);
+            var resourceGroupResource = (await subscriptionResource.GetResourceGroupAsync(resourceGroupName)).Value;
 
             // Execution parameters for the request including the retry policy used by Scheduledactions to retry the operation in case of failures
             var executionParams = new BulkActionExecutionParameterDetail()

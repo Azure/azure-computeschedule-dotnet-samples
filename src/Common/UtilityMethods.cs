@@ -290,14 +290,14 @@ namespace UtilityMethods
             {
                 var operation = operationResult.Operation;
                 var operationId = operation.OperationId;
-                var BulkActionOperationState = operation.State;
+                var operationState = operation.State;
                 var operationError = operation.Error;
 
                 Console.WriteLine($"[Polling operation]: {operationId}");
-                if (IsOperationTerminal(BulkActionOperationState))
+                if (IsOperationTerminal(operationState))
                 {
                     completedOps.TryAdd(operationId, operation);
-                    Console.WriteLine($"[Polling operation]: {operationId} completed with state {BulkActionOperationState}");
+                    Console.WriteLine($"[Polling operation]: {operationId} completed with state {operationState}");
 
                     if (operationError != null)
                     {

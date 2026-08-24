@@ -40,7 +40,7 @@ namespace ExecuteDelete
             ArmClient client = new(cred, subscriptionId, deleteOptions);
 
             var subscriptionResource = HelperMethods.GetSubscriptionResource(client, subscriptionId);
-            var resourceGroupResource = await subscriptionResource.GetResourceGroupAsync(resourceGroupName);
+            var resourceGroupResource = (await subscriptionResource.GetResourceGroupAsync(resourceGroupName)).Value;
 
             // Execution parameters for the request including the retry policy used by Scheduledactions to retry the operation in case of failures
             var executionParams = new BulkActionExecutionParameterDetail()
