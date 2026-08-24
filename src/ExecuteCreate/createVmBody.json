@@ -1,7 +1,7 @@
 {
     "resourceConfigParameters": {
         "baseProfile": {
-            "resourcegroupName": "computeschedule-azcliext-resources",
+            "resourcegroupName": "computebulkactions-azcliext-resources",
             "computeApiVersion": "2023-09-01",
             "location": "eastus2euap",
             "properties": {
@@ -68,7 +68,7 @@
                                         "properties": {
                                             "primary": true,
                                             "subnet": {
-                                                "id": "/subscriptions/01fa985f-6f66-4347-8dd5-01e969c51170/resourceGroups/computeschedule-azcliext-resources/providers/Microsoft.Network/virtualNetworks/tester-vnet/subnets/tester-subnet",
+                                                "id": "/subscriptions/01fa985f-6f66-4347-8dd5-01e969c51170/resourceGroups/computebulkactions-azcliext-resources/providers/Microsoft.Network/virtualNetworks/tester-vnet/subnets/tester-subnet",
                                                 "properties": {
                                                     "defaultoutboundaccess": false
                                                 }
@@ -110,7 +110,7 @@
                                 "createOption": "Attach",
                                 "deleteOption": "Detach",
                                 "managedDisk": {
-                                    "id": "/subscriptions/01fa985f-6f66-4347-8dd5-01e969c51170/resourceGroups/computeschedule-azcliext-resources/providers/Microsoft.Compute/disks/dotnet-sdk"
+                                    "id": "/subscriptions/01fa985f-6f66-4347-8dd5-01e969c51170/resourceGroups/computebulkactions-azcliext-resources/providers/Microsoft.Compute/disks/dotnet-sdk"
                                 }
                             }
                         ]
@@ -144,7 +144,7 @@
                                 "createOption": "Attach",
                                 "deleteOption": "Detach",
                                 "managedDisk": {
-                                    "id": "/subscriptions/01fa985f-6f66-4347-8dd5-01e969c51170/resourceGroups/computeschedule-azcliext-resources/providers/Microsoft.Compute/disks/dotnet-sdk-two"
+                                    "id": "/subscriptions/01fa985f-6f66-4347-8dd5-01e969c51170/resourceGroups/computebulkactions-azcliext-resources/providers/Microsoft.Compute/disks/dotnet-sdk-two"
                                 }
                             }
                         ]

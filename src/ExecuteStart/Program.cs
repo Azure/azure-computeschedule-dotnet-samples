@@ -1,7 +1,7 @@
 ﻿using Azure.Core;
 using Azure.Identity;
 using Azure.ResourceManager;
-using Azure.ResourceManager.ComputeBulkActions.Models;
+using Azure.ResourceManager.Compute.BulkActions.Models;
 using UtilityMethods;
 
 namespace ExecuteStart
@@ -24,7 +24,7 @@ namespace ExecuteStart
             // ResourceGroupName: The resource group name under which the virtual machines are located, in this case, we are using a dummy resource group name
             const string resourceGroupName = "demo-rg";
 
-            Dictionary<string, ResourceOperationDetails> completedOperations = [];
+            Dictionary<string, ComputeBulkOperationDetails> completedOperations = [];
             // Credential: The Azure credential used to authenticate the request
             TokenCredential cred = new DefaultAzureCredential();
 
@@ -40,11 +40,12 @@ namespace ExecuteStart
             ArmClient client = new(cred, subscriptionId, startOptions);
 
             var subscriptionResource = HelperMethods.GetSubscriptionResource(client, subscriptionId);
+            var resourceGroupResource = (await subscriptionResource.GetResourceGroupAsync(resourceGroupName)).Value;
 
             // Execution parameters for the request including the retry policy used by Scheduledactions to retry the operation in case of failures
-            var executionParams = new BulkActionExecutionConfig()
+            var executionParams = new BulkActionExecutionParameterDetail()
             {
-                RetryPolicy = new BulkActionRetryPolicy()
+                RetryPolicy = new BulkOperationRetryPolicy()
                 {
                     // Number of times ScheduledActions should retry the operation in case of failures: Range 0-7
                     RetryCount = 0,
@@ -56,15 +57,15 @@ namespace ExecuteStart
             // List of virtual machines to be startated, in this case, we are generating 10 virtual machines with the prefix "arm-on" and context prefix "arm-multivm-test"
             var resourcesWithContext = HelperMethods.GenerateResourcesWithContext(subscriptionId, resourceGroupName, "arm-multivm-test", "arm-on", 10);
 
-            var executeStartRequest = new ExecuteStartContent(executionParams, Guid.NewGuid().ToString())
+            var executeStartRequest = new ExecuteStartContent(executionParams)
             {
-                ResourcesWithContextItems = resourcesWithContext
+                ResourcesWithContext = resourcesWithContext
             };
 
-            await ComputescheduleOperations.ExecuteStartOperation(
+            await ComputeBulkActionsOperations.ExecuteStartOperation(
                 completedOperations,
                 executionParams,
-                subscriptionResource,
+                resourceGroupResource,
                 blockedOperationsException,
                 executeStartRequest,
                 location);

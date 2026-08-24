@@ -1,7 +1,7 @@
 using UtilityMethods;
 using Azure.Core;
-using Azure.ResourceManager.ComputeBulkActions;
-using Azure.ResourceManager.ComputeBulkActions.Models;
+using Azure.ResourceManager.Compute.BulkActions;
+using Azure.ResourceManager.Compute.BulkActions.Models;
 using Azure.ResourceManager.Resources;
 
 namespace OperationFallback;
@@ -16,18 +16,18 @@ namespace OperationFallback;
 public static class HibernateWithDeallocateFallback
 {
     public static async Task RunAsync(
-        SubscriptionResource subscriptionResource,
+        ResourceGroupResource resourceGroupResource,
         List<ResourceIdentifier> resourceIds,
         string location)
     {
         Console.WriteLine("[Scenario] Hibernate with Deallocate fallback\n");
 
-        var executionParams = new BulkActionExecutionConfig()
+        var executionParams = new BulkActionExecutionParameterDetail()
         {
-            RetryPolicy = new BulkActionRetryPolicy()
+            RetryPolicy = new BulkOperationRetryPolicy()
             {
                 RetryWindowInMinutes = 30,
-                OnFailureAction = ResourceOperationType.Deallocate
+                OnFailureAction = ComputeBulkOperationKind.Deallocate
             }
         };
 
@@ -35,16 +35,16 @@ public static class HibernateWithDeallocateFallback
             .Select((id, index) => new ResourceWithContext(id, $"hibernate-fallback-{index}"))
             .ToList();
 
-        var request = new ExecuteHibernateContent(executionParams, Guid.NewGuid().ToString())
+        var request = new ExecuteHibernateContent(executionParams)
         {
-            ResourcesWithContextItems = resourcesWithContext
+            ResourcesWithContext = new ResourcesWithContext(resourcesWithContext)
         };
 
         // Submit the hibernate operation
-        var result = await subscriptionResource.VirtualMachinesExecuteHibernateBulkActionAsync(location, request);
+        var result = (await resourceGroupResource.BulkHibernateOperationAsync(location, request)).Value;
 
         // Exclude resources not processed and collect valid operation IDs
-        var operationIds = UtilityMethods.HelperMethods.ExcludeResourcesNotProcessed(result.Value.Results).Keys.ToHashSet();
+        var operationIds = UtilityMethods.HelperMethods.ExcludeResourcesNotProcessed(result.Results).Keys.ToHashSet();
 
         if (operationIds.Count == 0)
         {
@@ -53,29 +53,29 @@ public static class HibernateWithDeallocateFallback
         }
 
         Console.WriteLine($"[Submit] {operationIds.Count} operation(s) submitted. Polling for results...\n");
-        var completedOperations = new Dictionary<string, ResourceOperationDetails>();
-        await UtilityMethods.HelperMethods.PollOperationStatus(operationIds, completedOperations, location, subscriptionResource);
+        var completedOperations = new Dictionary<string, ComputeBulkOperationDetails>();
+        await UtilityMethods.HelperMethods.PollOperationStatus(operationIds, completedOperations, location, resourceGroupResource);
 
-        // Interpret results — check FallbackOperation when state is Failed
+        // Interpret results — check FallbackOperationInfo when state is Failed
         foreach (var (opId, details) in completedOperations)
         {
             Console.WriteLine($"[Result] Operation {opId}: State = {details.State}");
 
-            if (details.State == OperationState.Succeeded)
+            if (details.State == BulkActionOperationState.Succeeded)
             {
                 Console.WriteLine("[OK] Hibernate succeeded — no fallback needed.");
             }
-            else if (details.State == OperationState.Failed)
+            else if (details.State == BulkActionOperationState.Failed)
             {
-                if (details.ResourceOperationError is not null)
+                if (details.Error is not null)
                 {
-                    Console.WriteLine($"[Error] Primary: {details.ResourceOperationError.ErrorCode} — {details.ResourceOperationError.ErrorDetails}");
+                    Console.WriteLine($"[Error] Primary: {details.Error.ErrorCode} — {details.Error.ErrorDetails}");
                 }
 
-                if (details.FallbackOperation is not null)
+                if (details.FallbackOperationInfo is not null)
                 {
-                    var fallback = details.FallbackOperation;
-                    Console.WriteLine($"[Fallback] {fallback.LastOpType}: Status = {fallback.Status}");
+                    var fallback = details.FallbackOperationInfo;
+                    Console.WriteLine($"[Fallback] {fallback.LastOperationKind}: Status = {fallback.Status}");
 
                     if (fallback.Status == "Succeeded")
                     {

@@ -1,7 +1,7 @@
 ﻿using Azure.Core;
 using Azure.Identity;
 using Azure.ResourceManager;
-using Azure.ResourceManager.ComputeBulkActions.Models;
+using Azure.ResourceManager.Compute.BulkActions.Models;
 using UtilityMethods;
 
 namespace ExecuteCreate
@@ -22,9 +22,9 @@ namespace ExecuteCreate
             const string subscriptionId = "eb9fa9eb-7e35-486f-8d93-0240680bdd66";
 
             // ResourceGroupName: The resource group name under which the virtual machines are located, in this case, we are using a dummy resource group name
-            const string resourceGroupName = "computeschedule-azcliext-resources";
+            const string resourceGroupName = "computebulkactions-azcliext-resources";
 
-            Dictionary<string, ResourceOperationDetails> completedOperations = [];
+            Dictionary<string, ComputeBulkOperationDetails> completedOperations = [];
             // Credential: The Azure credential used to authenticate the request
             TokenCredential cred = new DefaultAzureCredential();
 
@@ -39,12 +39,12 @@ namespace ExecuteCreate
             // Client: The Azure Resource Manager client used to interact with the Azure Resource Manager API
             ArmClient client = new(cred, subscriptionId, createOptions);
             var subscriptionResource = HelperMethods.GetSubscriptionResource(client, subscriptionId);
-            var resourceGroupResource = await subscriptionResource.GetResourceGroupAsync(resourceGroupName);
+            var resourceGroupResource = (await subscriptionResource.GetResourceGroupAsync(resourceGroupName)).Value;
 
             // Execution parameters for the request including the retry policy used by Scheduledactions to retry the operation in case of failures
-            var executionParams = new BulkActionExecutionConfig()
+            var executionParams = new BulkActionExecutionParameterDetail()
             {
-                RetryPolicy = new BulkActionRetryPolicy()
+                RetryPolicy = new BulkOperationRetryPolicy()
                 {
                     // Number of times ScheduledActions should retry the operation in case of failures: Range 0-7
                     RetryCount = 0,
@@ -82,10 +82,10 @@ namespace ExecuteCreate
                 $"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/disks/dotnet-sdk-two");
 
             // Create type operation: Create operation on virtual machines
-            await ComputescheduleOperations.ExecuteCreateOperation(
+            await ComputeBulkActionsOperations.ExecuteCreateOperation(
                 completedOperations,
                 executionParams,
-                subscriptionResource,
+                resourceGroupResource,
                 blockedOperationsException, 
                 [resourceOverrideOne, resourceOverrideTwo],
                 2,

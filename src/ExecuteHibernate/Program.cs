@@ -1,7 +1,7 @@
 ﻿using Azure.Core;
 using Azure.Identity;
 using Azure.ResourceManager;
-using Azure.ResourceManager.ComputeBulkActions.Models;
+using Azure.ResourceManager.Compute.BulkActions.Models;
 using UtilityMethods;
 
 namespace ExecuteHibernate
@@ -24,7 +24,7 @@ namespace ExecuteHibernate
             // ResourceGroupName: The resource group name under which the virtual machines are located, in this case, we are using a dummy resource group name
             const string resourceGroupName = "demo-rg";
 
-            Dictionary<string, ResourceOperationDetails> completedOperations = [];
+            Dictionary<string, ComputeBulkOperationDetails> completedOperations = [];
             // Credential: The Azure credential used to authenticate the request
             TokenCredential cred = new DefaultAzureCredential();
 
@@ -40,11 +40,12 @@ namespace ExecuteHibernate
             ArmClient client = new(cred, subscriptionId, hibernateOptions);
 
             var subscriptionResource = HelperMethods.GetSubscriptionResource(client, subscriptionId);
+            var resourceGroupResource = (await subscriptionResource.GetResourceGroupAsync(resourceGroupName)).Value;
 
             // Execution parameters for the request including the retry policy used by Scheduledactions to retry the operation in case of failures
-            var executionParams = new BulkActionExecutionConfig()
+            var executionParams = new BulkActionExecutionParameterDetail()
             {
-                RetryPolicy = new BulkActionRetryPolicy()
+                RetryPolicy = new BulkOperationRetryPolicy()
                 {
                     // Number of times ScheduledActions should retry the operation in case of failures: Range 0-7
                     RetryCount = 0,
@@ -56,15 +57,15 @@ namespace ExecuteHibernate
             // List of virtual machines to be hibernated, in this case, we are generating 10 virtual machines with the prefix "arm-on" and context prefix "arm-multivm-test"
             var resourcesWithContext = HelperMethods.GenerateResourcesWithContext(subscriptionId, resourceGroupName, "arm-multivm-test", "arm-on", 10);
 
-            var executeHibernateRequest = new ExecuteHibernateContent(executionParams, Guid.NewGuid().ToString())
+            var executeHibernateRequest = new ExecuteHibernateContent(executionParams)
             {
-                ResourcesWithContextItems = resourcesWithContext
+                ResourcesWithContext = resourcesWithContext
             };
 
-            await ComputescheduleOperations.ExecuteHibernateOperation(
+            await ComputeBulkActionsOperations.ExecuteHibernateOperation(
                 completedOperations,
                 executionParams,
-                subscriptionResource,
+                resourceGroupResource,
                 blockedOperationsException,
                 executeHibernateRequest,
                 location);
