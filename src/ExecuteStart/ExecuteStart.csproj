@@ -11,4 +11,8 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\Common\Common.csproj" />
 	</ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.ResourceManager.Compute.BulkActions" Version="1.2.0-beta.2" />
+  </ItemGroup>
 </Project>
