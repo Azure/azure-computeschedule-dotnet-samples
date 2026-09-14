@@ -10,21 +10,50 @@ internal sealed record BatchRequest(string Label, string OperationName, string C
 
 internal static class BulkCreateRequestBuilder
 {
-    public static BatchRequest[] Build(DemoConfig config, string password, bool includePerSizeBatch = false)
+    public static BatchRequest BuildPerVmRequest(DemoConfig config, string password, string runId) =>
+        BuildBatch(config, password, runId, "a", 100);
+
+    public static BatchRequest BuildPerSizeRequest(DemoConfig config, string password, string runId)
     {
-        config.Validate(password);
+        var batch = BuildBatch(config, password, runId, "b", 50);
+        foreach (var size in batch.Data.Properties.VmSizesProfile)
+        {
+            size.Override = new BulkCreateCustomOverrideBase
+            {
+                VirtualMachineProfile = new BulkActionVMProperties
+                {
+                    StorageProfile = new StorageProfile
+                    {
+                        OSDisk = new OSDisk(DiskCreateOptionTypes.FromImage)
+                        {
+                            DiskSizeGB = config.Sizes.Single(candidate => candidate.Name == size.Name).OSDiskGB
+                        }
+                    }
+                }
+            };
+        }
+        return batch with
+        {
+            ExpectedDisks = config.Sizes.ToDictionary(size => size.Name, size => size.OSDiskGB, StringComparer.OrdinalIgnoreCase)
+        };
+    }
+
+    public static BatchRequest[] Build(DemoConfig config, string password, bool includePerSizeBatch = true)
+    {
         var runId = Guid.NewGuid().ToString("N");
-        // Reserve batch and index suffixes before composing the 15-character Windows names.
-        var computerRun = RandomNumberGenerator.GetString("abcdefghijklmnopqrstuvwxyz012345", 10);
-        var first = BuildBatch(config, password, runId, computerRun, "a", 100, perSize: false);
+        var first = BuildPerVmRequest(config, password, runId);
         return includePerSizeBatch
-            ? [first, BuildBatch(config, password, runId, computerRun, "b", 50, perSize: true)]
+            ? [first, BuildPerSizeRequest(config, password, runId)]
             : [first];
     }
 
-    private static BatchRequest BuildBatch(DemoConfig config, string password, string runId,
-        string computerRun, string label, int count, bool perSize)
+    private static BatchRequest BuildBatch(DemoConfig config, string password, string runId, string label, int count)
     {
+        config.Validate(password);
+        if (!Guid.TryParseExact(runId, "N", out _))
+            throw new ArgumentException("Run ID must be a 32-character GUID.");
+        // Reserve batch and index suffixes so every Windows computer name is exactly 15 characters.
+        var computerRun = RandomNumberGenerator.GetString("abcdefghijklmnopqrstuvwxyz012345", 10);
         var properties = new BulkCreateCustomProperties(count,
             new BulkCreateCustomPriorityProfile
             {
@@ -47,21 +76,7 @@ internal static class BulkCreateRequestBuilder
         };
         foreach (var size in config.Sizes.OrderBy(s => s.Rank))
         {
-            var profile = new BulkCreateCustomVmSizeProfile(size.Name, size.Rank);
-            if (perSize)
-            {
-                profile.Override = new BulkCreateCustomOverrideBase
-                {
-                    VirtualMachineProfile = new BulkActionVMProperties
-                    {
-                        StorageProfile = new StorageProfile
-                        {
-                            OSDisk = new OSDisk(DiskCreateOptionTypes.FromImage) { DiskSizeGB = size.OSDiskGB }
-                        }
-                    }
-                };
-            }
-            properties.VmSizesProfile.Add(profile);
+            properties.VmSizesProfile.Add(new BulkCreateCustomVmSizeProfile(size.Name, size.Rank));
         }
 
         var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -70,8 +85,8 @@ internal static class BulkCreateRequestBuilder
             var name = $"{config.RunPrefix}-{runId}-{label}-{i:D3}";
             var computerName = $"{config.RunPrefix[0]}{computerRun}{label}{i:D3}";
             names.Add(name, computerName);
-            // Even the per-size batch requires capacity-many identity entries. Disk settings
-            // are deliberately absent here so they cannot mask the native per-size override.
+            // Both examples supply per-VM names. Disk settings are absent here
+            // so these entries cannot mask Batch B's native per-size override.
             properties.OverridesProfile.Overrides.Add(new BulkCreateCustomOverride
             {
                 VirtualMachineName = name,
@@ -90,7 +105,7 @@ internal static class BulkCreateRequestBuilder
         data.Tags.Add("correlationId", correlation);
         return new BatchRequest(label, Guid.NewGuid().ToString(), correlation, data,
             $"/subscriptions/{config.SubscriptionId}/resourceGroups/{config.ResourceGroup}/providers/Microsoft.Compute/virtualMachines/", names,
-            config.Sizes.ToDictionary(s => s.Name, s => perSize ? s.OSDiskGB : config.ImageMinimumOSDiskGB,
+            config.Sizes.ToDictionary(s => s.Name, s => config.ImageMinimumOSDiskGB,
                 StringComparer.OrdinalIgnoreCase));
     }
 
@@ -100,7 +115,16 @@ internal static class BulkCreateRequestBuilder
         {
             AdminUsername = config.AdminUsername,
             AdminPassword = password,
-            WindowsConfiguration = new WindowsConfiguration { IsProvisionVMAgent = true, EnableAutomaticUpdates = true }
+            WindowsConfiguration = new WindowsConfiguration
+            {
+                IsProvisionVMAgent = true,
+                EnableAutomaticUpdates = true,
+                PatchSettings = new PatchSettings
+                {
+                    PatchMode = WindowsVMGuestPatchMode.AutomaticByOS,
+                    AssessmentMode = WindowsPatchAssessmentMode.AutomaticByPlatform
+                }
+            }
         },
         StorageProfile = new StorageProfile
         {

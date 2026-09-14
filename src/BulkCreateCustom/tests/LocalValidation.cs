@@ -15,8 +15,37 @@ internal static class LocalValidation
 
     public static async Task<int> RunAsync()
     {
-        Check(DemoConfig.DefaultPath == Path.Combine(AppContext.BaseDirectory, "config.json")
-            && Path.IsPathFullyQualified(DemoConfig.DefaultPath), "default config is beside the executable, independent of the working directory");
+        Check(!CreateCommand.Parse([]).Verbose && CreateCommand.Parse(["--verbose"]).Verbose,
+            "concise console default with explicit verbose flag");
+        Check(CreateCommand.Parse(["--config", "config.json", "--verbose"]).ConfigPath == Path.GetFullPath("config.json"),
+            "create config override remains explicit");
+        foreach (var invalidArgs in new string[][]
+        {
+            ["--execute"], ["--config"], ["--config", "--verbose"], ["--verbose", "--verbose"],
+            ["--unknown"], ["--validate", "--verbose"], ["--delete-batch-b", "invalid"]
+        })
+        {
+            var rejected = false;
+            try { CreateCommand.Parse(invalidArgs); }
+            catch (ArgumentException) { rejected = true; }
+            Check(rejected, "invalid create arguments never submit");
+        }
+        Check(Path.IsPathFullyQualified(DemoConfig.DefaultPath)
+            && Path.GetFileName(DemoConfig.DefaultPath) == "config.json"
+            && File.Exists(Path.Combine(Path.GetDirectoryName(DemoConfig.DefaultPath)!, "BulkCreateCustom.csproj"))
+            && DemoConfig.DefaultPath != Path.Combine(AppContext.BaseDirectory, "config.json"),
+            "default config is in the source project, not the executable folder");
+        var originalDirectory = Environment.CurrentDirectory;
+        try
+        {
+            var expectedConfigPath = DemoConfig.DefaultPath;
+            Environment.CurrentDirectory = Path.GetTempPath();
+            Check(DemoConfig.DefaultPath == expectedConfigPath, "source config resolution is independent of working directory");
+        }
+        finally
+        {
+            Environment.CurrentDirectory = originalDirectory;
+        }
         var config = new DemoConfig
         {
             SubscriptionId = "11111111-1111-1111-1111-111111111111",
@@ -25,19 +54,64 @@ internal static class LocalValidation
             Zones = ["1", "2", "3"], RunPrefix = "abcdefghijkl", AdminUsername = "bulkoperator",
             ImageVersion = "20348.0.0", ImageMinimumOSDiskGB = 127
         };
-        var firstOnly = BulkCreateRequestBuilder.Build(config, FixturePassword);
+        var firstOnly = BulkCreateRequestBuilder.Build(config, FixturePassword, includePerSizeBatch: false);
+        var passwordConfigPath = Path.Combine(Path.GetTempPath(), $"bulk-config-{Guid.NewGuid():N}.json");
+        try
+        {
+            var configNode = System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(config))!;
+            const string configuredPassword = "Offline-\"\\Config!73xQ";
+            configNode[nameof(DemoConfig.AdminPassword)] = configuredPassword;
+            File.WriteAllText(passwordConfigPath, configNode.ToJsonString());
+            var loaded = DemoConfig.Load(passwordConfigPath);
+            var configuredBatches = BulkCreateRequestBuilder.Build(loaded, loaded.GetAdminPassword());
+            Check(configuredBatches.All(batch => batch.Data.Properties.ComputeProfile.VirtualMachineProfile.OSProfile.AdminPassword == configuredPassword),
+                "JSON password including escaped characters is used in both requests");
+            using var output = new StringWriter();
+            var logger = new DemoLog(output, loaded.GetAdminPassword());
+            foreach (var batch in configuredBatches) logger.WriteRequest(batch);
+            Check(!output.ToString().Contains(configuredPassword) && output.ToString().Contains("[REDACTED]"),
+                "configured password remains redacted");
+            foreach (var missing in new string?[] { null, "", " " })
+            {
+                configNode[nameof(DemoConfig.AdminPassword)] = missing;
+                File.WriteAllText(passwordConfigPath, configNode.ToJsonString());
+                var rejected = false;
+                try { DemoConfig.Load(passwordConfigPath).GetAdminPassword(); }
+                catch (ArgumentException) { rejected = true; }
+                Check(rejected, "null/empty config password rejected before submission");
+            }
+            config.ValidateScope();
+        }
+        finally { File.Delete(passwordConfigPath); }
         Check(firstOnly is [{ Label: "a" }] && firstOnly[0].Data.Properties.Capacity == 100,
-            "normal run builds only Batch A with 100 VMs");
+            "explicit single-batch selection builds only Batch A with 100 VMs");
         await ScenarioAsync(firstOnly, "success", expectedExit: 0);
         await ScenarioAsync(firstOnly, "submission-failure", expectedExit: 1);
-        var batches = BulkCreateRequestBuilder.Build(config, FixturePassword, includePerSizeBatch: true);
+        var batches = BulkCreateRequestBuilder.Build(config, FixturePassword);
+        Check(batches is [{ Label: "a" }, { Label: "b" }]
+            && batches[0].Data.Properties.Capacity == 100 && batches[1].Data.Properties.Capacity == 50,
+            "normal run enables both batches with 150 VMs");
+        using (var console = new StringWriter())
+        using (var fullLog = new StringWriter())
+        {
+            var log = new DemoLog(console, FixturePassword, fullLog);
+            log.Write("Summary: pending=100");
+            log.WriteRequest(batches[0]);
+            log.WriteDetail($"VM detail with {FixturePassword}");
+            Check(console.ToString().Contains("Summary: pending=100")
+                && !console.ToString().Contains("request JSON") && !console.ToString().Contains("VM detail"),
+                "normal console keeps summaries without JSON/per-VM detail");
+            Check(fullLog.ToString().Contains("request JSON") && fullLog.ToString().Contains("VM detail with [REDACTED]")
+                && !fullLog.ToString().Contains(FixturePassword),
+                "concise console retains complete redacted file logging");
+        }
         var logPath = Path.Combine(Path.GetTempPath(), $"bulk-create-validation-{Guid.NewGuid():N}.log");
         try
         {
             using var console = new StringWriter();
             using (var file = new StreamWriter(new FileStream(logPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read)))
             {
-                var log = new DemoLog(console, FixturePassword, file);
+                var log = new DemoLog(console, FixturePassword, file, verbose: true);
                 log.WriteRequest(batches[0]);
                 log.Write($"Sensitive test text: {FixturePassword}");
                 await Task.WhenAll(Enumerable.Range(0, 20).Select(i => Task.Run(() => log.Write($"Status {i}"))));
@@ -107,6 +181,12 @@ internal static class LocalValidation
             Check(retry.GetProperty("retryWindowInMinutes").GetInt32() == 5
                 && !retry.TryGetProperty("retryCount", out _), "five-minute service retry without a count override");
             var baseProfile = properties.GetProperty("computeProfile").GetProperty("virtualMachineProfile");
+            var windows = baseProfile.GetProperty("osProfile").GetProperty("windowsConfiguration");
+            Check(windows.GetProperty("enableAutomaticUpdates").GetBoolean()
+                && windows.GetProperty("provisionVMAgent").GetBoolean()
+                && windows.GetProperty("patchSettings").GetProperty("patchMode").GetString() == "AutomaticByOS"
+                && windows.GetProperty("patchSettings").GetProperty("assessmentMode").GetString() == "AutomaticByPlatform",
+                "explicit OS-managed patching and platform periodic assessment");
             Check(!baseProfile.TryGetProperty("hardwareProfile", out _) && !baseProfile.TryGetProperty("zones", out _),
                 "no fixed VM size or zone");
             Check(baseProfile.GetProperty("osProfile").GetProperty("adminPassword").GetString() == FixturePassword,
@@ -166,7 +246,8 @@ internal static class LocalValidation
         await ScenarioAsync(batches, "cancellation", expectedExit: 1);
         await ScenarioAsync(batches, "invalid-status", expectedExit: 1);
         await SdkTransportValidation.RunAsync(config, batches, FixturePassword);
-        Console.WriteLine("Offline validation passed: serialized 100+50 requests, native size overrides, naming, " +
+        await BulkDeleteValidation.RunAsync();
+        Console.WriteLine("Offline validation passed: serialized 100+50 requests (both batches enabled), native size overrides, naming, " +
             "ranks/zones/retry, concurrent acceptance, sibling failure isolation, partial outcomes, timeout/cancellation and redaction. No Azure calls.");
         return 0;
     }

@@ -10,7 +10,7 @@ The samples are intentionally small and focused. Each project folder represents 
 |---|---|
 | `ExecuteCreate` | Standard VM create flow with network and disk setup |
 | `ExecuteVDICreateFlex` | VDI Flex create API sample flow |
-| `BulkCreateCustom` | 100-VM per-VM override request using the BulkActions SDK; per-size batch currently disabled |
+| [`BulkCreateCustom`](./src/BulkCreateCustom/README.md) | Concurrent 100+50 VM create requests, per-size/per-VM overrides, and a separate Batch B Bulk Delete preview/execute command |
 | `ExecuteStart` | Start existing VMs |
 | `ExecuteDeallocate` | Deallocate existing VMs |
 | `ExecuteDelete` | Delete existing VMs |
@@ -123,14 +123,21 @@ For detailed setup, configuration, and usage instructions, check the documentati
 
 [`BulkCreateCustom`](./src/BulkCreateCustom/README.md) is a separate .NET 10 sample.
 `dotnet run --project src\BulkCreateCustom\BulkCreateCustom.csproj -- --validate`
-performs offline checks; normal execution reads the sample's local `config.json`
-and creates 100 billable VMs (Batch A only). `--config <path>` optionally overrides the file.
+runs all offline C# checks; normal execution reads the source sample's local
+`config.json` and submits creation of 150 billable VMs (Batches A and B), with
+no create preview or automatic cleanup. Follow its
+[quickstart](./src/BulkCreateCustom/README.md#quickstart) before running.
+`--config <path>` overrides the file; `--verbose` adds full redacted JSON/per-VM
+console details while full redacted logs persist by default. The separate
+`--delete-batch-b <UUID>` command previews using Azure reads and requires
+`--execute` to delete Batch B's 50 VMs; Batch A and retained dependencies remain.
 
 ## Project Structure
 
 ```text
 src/
 ├── Common/
+├── BulkCreateCustom/
 ├── ExecuteCreate/
 ├── ExecuteVDICreateFlex/
 ├── ExecuteStart/
@@ -145,6 +152,8 @@ src/
 
 ## Documentation
 
+- [src/BulkCreateCustom/README.md](./src/BulkCreateCustom/README.md): configure, prepare networking, create 100+50 VMs, inspect overrides, and preview/delete Batch B
+- [src/BulkCreateCustom/docs/reference.md](./src/BulkCreateCustom/docs/reference.md): request details, troubleshooting, offline checks and broader cleanup safety
 - [src/ExecuteVDICreateFlex/README.md](./src/ExecuteVDICreateFlex/README.md): setup and run instructions for the ExecuteVDICreateFlex sample
 - [src/ExecuteVDICreateFlex/rest-api-documentation.md](./src/ExecuteVDICreateFlex/rest-api-documentation.md): ExecuteVDICreateFlex request and response reference
 - [src/ExecuteDeallocate/docs/deallocate-preempts-start.md](./src/ExecuteDeallocate/docs/deallocate-preempts-start.md): behavior and API semantics when deallocate preempts a pending or in-progress start

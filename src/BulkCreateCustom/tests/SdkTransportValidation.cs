@@ -46,7 +46,7 @@ internal static class SdkTransportValidation
             if (scenario == "status-never-visible")
                 Require(output.ToString().Contains("poll timeout"), "persistent status 404 is bounded, not successful");
             if (scenario == "vm-pending")
-                Require(output.ToString().Contains("pending=100") && output.ToString().Contains("succeeded=100"),
+                Require(output.ToString().Contains("pending=100;") && output.ToString().Contains("succeeded=100;"),
                     "per-VM pending results are polled until success");
         }
     }

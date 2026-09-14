@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -6,7 +7,12 @@ namespace BulkCreateCustom;
 
 internal sealed class DemoConfig
 {
-    public static string DefaultPath => Path.Combine(AppContext.BaseDirectory, "config.json");
+    // Anchor to the project directory captured at build time, not the executable or working directory.
+    public static string DefaultPath => Path.Combine(
+        typeof(DemoConfig).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+            .Single(attribute => attribute.Key == "SourceDirectory").Value
+            ?? throw new InvalidOperationException("The build is missing its source directory metadata."),
+        "config.json");
 
     public string SubscriptionId { get; init; } = "";
     public string ResourceGroup { get; init; } = "";
@@ -15,6 +21,7 @@ internal sealed class DemoConfig
     public string[] Zones { get; init; } = [];
     public string RunPrefix { get; init; } = "";
     public string AdminUsername { get; init; } = "";
+    public string AdminPassword { get; init; } = "";
     public string ImageVersion { get; init; } = "";
     public int ImageMinimumOSDiskGB { get; init; }
     public int PollTimeoutMinutes { get; init; } = 30;
@@ -33,13 +40,26 @@ internal sealed class DemoConfig
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
         }) ?? throw new ArgumentException("Configuration must be a JSON object.");
 
-    public void Validate(string password)
+    public void ValidateScope()
     {
         Require(Guid.TryParse(SubscriptionId, out var subscription) && subscription != Guid.Empty,
             "SubscriptionId must be a nonempty GUID.");
         Require(Matches(ResourceGroup, @"^[a-zA-Z0-9_.()-]{1,90}$") && !ResourceGroup.EndsWith('.'),
             "ResourceGroup must be an existing resource group name.");
         Require(Matches(Region, @"^[a-z][a-z0-9]+$"), "Region must be an explicit Azure region name.");
+        Require(PollTimeoutMinutes is >= 1 and <= 120, "PollTimeoutMinutes must be 1-120, independent of service retry.");
+    }
+
+    public string GetAdminPassword()
+    {
+        if (string.IsNullOrWhiteSpace(AdminPassword))
+            throw new ArgumentException("Set adminPassword in your local config.json before creating VMs.");
+        return AdminPassword;
+    }
+
+    public void Validate(string password)
+    {
+        ValidateScope();
         Require(Matches(SubnetId, @"^/subscriptions/[0-9a-fA-F-]{36}/resourceGroups/[^/]+/providers/Microsoft.Network/virtualNetworks/[^/]+/subnets/[^/]+$"),
             "SubnetId must be an existing subnet ARM ID.");
         Require(SubnetId.StartsWith($"/subscriptions/{SubscriptionId}/", StringComparison.OrdinalIgnoreCase),
@@ -55,11 +75,10 @@ internal sealed class DemoConfig
             && !password.Any(char.IsControl)
             && new[] { password.Any(char.IsUpper), password.Any(char.IsLower), password.Any(char.IsDigit),
                 password.Any(c => !char.IsLetterOrDigit(c)) }.Count(x => x) >= 3,
-            "BULK_VM_ADMIN_PASSWORD must meet Windows password requirements (12-123 characters, 3 character classes, no username).");
+            "adminPassword must meet Windows password requirements (12-123 characters, 3 character classes, no username).");
         Require(Matches(ImageVersion, @"^\d+\.\d+\.\d+$"),
             "ImageVersion must pin an existing Windows Server 2022 Datacenter Azure Edition image version (not latest).");
         Require(ImageMinimumOSDiskGB is >= 127 and <= 4095, "ImageMinimumOSDiskGB must be the verified image minimum (127-4095).");
-        Require(PollTimeoutMinutes is >= 1 and <= 120, "PollTimeoutMinutes must be 1-120, independent of service retry.");
         Require(Sizes is { Length: >= 1 and <= 10 }, "Configure 1-10 VM size candidates (sample safety cap).");
         Require(Sizes.All(s => s is not null && Matches(s.Name, @"^Standard_[DE][48](s|ds|as|ads)_v5$")),
             "Use 4/8-vCPU D/E s, ds, as or ads v5 candidates compatible with the image; confirm regional eligibility.");

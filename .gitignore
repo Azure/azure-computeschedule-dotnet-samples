@@ -179,4 +179,5 @@ node_modules/
 
 # Local BulkCreateCustom configuration
 src/BulkCreateCustom/config.json
+src/BulkCreateCustom/cleanup-*.json
 src/BulkCreateCustom/bruno/environments/Local.bru

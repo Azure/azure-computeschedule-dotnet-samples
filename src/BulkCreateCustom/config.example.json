@@ -6,6 +6,7 @@
   "zones": ["1", "2", "3"],
   "runPrefix": "demo",
   "adminUsername": "bulkoperator",
+  "adminPassword": "",
   "imageVersion": "<verified-existing-version>",
   "imageMinimumOSDiskGB": 127,
   "pollTimeoutMinutes": 30,

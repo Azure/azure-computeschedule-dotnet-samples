@@ -9,6 +9,6 @@
     <PackageReference Include="Azure.ResourceManager.Compute.BulkActions" Version="1.2.0-beta.2" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="config.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <AssemblyMetadata Include="SourceDirectory" Value="$(MSBuildProjectDirectory)" />
   </ItemGroup>
 </Project>
