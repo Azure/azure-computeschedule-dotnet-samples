@@ -181,3 +181,4 @@ node_modules/
 src/BulkCreateCustom/config.json
 src/BulkCreateCustom/cleanup-*.json
 src/BulkCreateCustom/bruno/environments/Local.bru
+src/BulkCreateCustom/bruno/README.md
