@@ -30,7 +30,7 @@ namespace ExecuteStart
             var subscriptionResource = HelperMethods.GetSubscriptionResource(client, subscriptionId);
             var resourceGroupResource = await subscriptionResource.GetResourceGroupAsync(resourceGroupName);
 
-            // Execution parameters for the request including the retry policy used by Scheduledactions to retry the operation in case of failures
+            // Execution parameters for the request including the capacity recommendation parameters used to suggest alternative placement in case of allocation failures
             var executionParams = new BulkActionExecutionParameterDetail()
             {
                 // Capacity recommendations are computed when a VM fails to start because of an allocation failure.
